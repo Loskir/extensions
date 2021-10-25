@@ -424,9 +424,9 @@ function Command() {
                   const shortcut = i === 0 ? ({modifiers: ['cmd'], key: 'b'} as KeyboardShortcut) : undefined
                   let icon = undefined as Image | undefined
                   if (remote.host == 'github.com') {
-                    icon = {source: {dark: 'github-brands-dark.png', light: 'github-brands-light.png'}}
+                    icon = {source: 'github-icon.png', tintColor: {dark: '#ffffff', light: '#000000'}}
                   } else if (remote.host == 'gitlab.com') {
-                    icon = {source: {dark: 'gitlab-brands-dark.png', light: 'gitlab-brands-light.png'}}
+                    icon = {source: 'gitlab-icon.png', tintColor: {dark: '#ffffff', light: '#000000'}}
                   }
                   return (
                     <OpenInBrowserAction
