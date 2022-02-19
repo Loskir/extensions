@@ -23,7 +23,7 @@ export interface Job {
 }
 
 const GET_PIPELINE_JOBS = gql`
-  query GetProjectPipeplines($fullPath: ID!, $pipelineIID: ID!) {
+  query GetProjectPipelines($fullPath: ID!, $pipelineIID: ID!) {
     project(fullPath: $fullPath) {
       pipeline(iid: $pipelineIID) {
         stages {
