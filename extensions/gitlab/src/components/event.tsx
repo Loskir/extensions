@@ -8,6 +8,7 @@ import {
   ImageSource,
   List,
   OpenInBrowserAction,
+  PushAction,
   showToast,
   ToastStyle,
 } from "@raycast/api";
@@ -17,6 +18,7 @@ import { gitlab } from "../common";
 import { Project, searchData } from "../gitlabapi";
 import { GitLabIcons } from "../icons";
 import { capitalizeFirstLetter } from "../utils";
+import { ProjectScreen } from "./project";
 
 export interface PushData {
   commit_count: number;
@@ -61,6 +63,10 @@ export function EventListItem(props: { event: Event }) {
   let icon: ImageLike | undefined;
   const action_name = ev.action_name;
   let actionElement: JSX.Element | undefined;
+  const actionElements: JSX.Element[] = [];
+  if (project) {
+    actionElements.push(<PushAction title="Open Project" target={<ProjectScreen project={project} />} />);
+  }
   switch (action_name) {
     case "updated":
       {
@@ -264,12 +270,17 @@ export function EventListItem(props: { event: Event }) {
       title={title || ""}
       icon={icon}
       accessoryTitle={accessoryTitle}
-      actions={<ActionPanel>{actionElement && actionElement}</ActionPanel>}
+      actions={
+        <ActionPanel>
+          {actionElement && actionElement}
+          {...actionElements}
+        </ActionPanel>
+      }
     />
   );
 }
 
-export function EventList() {
+export function EventList(): JSX.Element {
   const [searchText, setSearchText] = useState<string>();
   const { data, error, isLoading } = useCache<Event[]>(
     "events",
