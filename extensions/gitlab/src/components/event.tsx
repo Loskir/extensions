@@ -3,6 +3,7 @@ import {
   Color,
   ColorLike,
   CopyToClipboardAction,
+  Detail,
   Icon,
   ImageLike,
   ImageSource,
@@ -443,7 +444,7 @@ export function EventList(): JSX.Element {
   }
 
   if (!data) {
-    return <List isLoading={true} searchBarPlaceholder="Loading" />;
+    return <Detail isLoading />;
   }
   return (
     <List onSearchTextChange={setSearchText} isLoading={isLoading} throttle={true}>

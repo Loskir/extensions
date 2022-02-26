@@ -1,4 +1,4 @@
-import { ActionPanel, CopyToClipboardAction, List, showToast, ToastStyle, Color } from "@raycast/api";
+import { ActionPanel, CopyToClipboardAction, List, showToast, ToastStyle, Color, Detail } from "@raycast/api";
 import { useState } from "react";
 import { gitlab, gitlabgql } from "../common";
 import { Project, searchData } from "../gitlabapi";
@@ -106,7 +106,7 @@ export function ProjectList({ membership = true, starred = false }: ProjectListP
   }
 
   if (!data) {
-    return <List isLoading={true} searchBarPlaceholder="Loading" />;
+    return <Detail isLoading />;
   }
 
   return (
