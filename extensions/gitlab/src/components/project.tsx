@@ -78,7 +78,6 @@ export function ProjectListItem(props: { project: Project }): JSX.Element {
         <ActionPanel>
           <ActionPanel.Section title={project.name_with_namespace}>
             <ProjectDefaultActions project={project} />
-            <GitLabOpenInBrowserAction url={project.web_url} />
             <CopyToClipboardAction title="Copy Project ID" content={project.id} />
           </ActionPanel.Section>
           <ActionPanel.Section>{...getProjectActions(project)}</ActionPanel.Section>
