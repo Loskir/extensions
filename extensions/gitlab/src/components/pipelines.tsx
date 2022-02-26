@@ -120,12 +120,12 @@ export function useSearch(
   query: string | undefined,
   projectFullPath: string
 ): {
-  pipelines: any[];
+  pipelines: any[] | undefined;
   error?: string;
   isLoading: boolean;
   refresh: () => void;
 } {
-  const [pipelines, setPipelines] = useState<any[]>([]);
+  const [pipelines, setPipelines] = useState<any[] | undefined>(undefined);
   const [error, setError] = useState<string>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [timestamp, setTimestamp] = useState<Date>(now());
