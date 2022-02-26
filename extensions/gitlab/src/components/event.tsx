@@ -7,7 +7,6 @@ import {
   ImageLike,
   ImageSource,
   List,
-  OpenInBrowserAction,
   PushAction,
   showToast,
   ToastStyle,
