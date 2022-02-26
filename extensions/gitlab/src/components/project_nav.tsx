@@ -10,12 +10,14 @@ import { IssueList, IssueScope } from "./issues";
 import { GitLabIcons } from "../icons";
 import { GitLabOpenInBrowserAction } from "./actions";
 import { ProjectLabelList } from "./project_label";
+import { ProjectNavigationActions } from "./project_actions";
 
 export function ProjectNavMenuItem(props: {
   title: string;
   shortcut?: KeyboardShortcut | undefined;
   target: ReactNode;
   icon?: ImageLike;
+  project: Project;
 }): JSX.Element {
   return (
     <List.Item
@@ -24,6 +26,9 @@ export function ProjectNavMenuItem(props: {
       actions={
         <ActionPanel>
           <PushAction title={`Open ${props.title}`} shortcut={props.shortcut} target={props.target} />
+          <ActionPanel.Section>
+            <ProjectNavigationActions project={props.project} />
+          </ActionPanel.Section>
         </ActionPanel>
       }
     />
@@ -59,31 +64,37 @@ export function ProjectNavMenusList(props: { project: Project }): JSX.Element {
     <List navigationTitle={`Project ${project.fullPath}`}>
       <List.Section>
         <ProjectNavMenuItem
+          project={project}
           title="Issues"
           icon={{ source: GitLabIcons.issue, tintColor: Color.PrimaryText }}
           target={<IssueList scope={IssueScope.all} project={project} />}
         />
         <ProjectNavMenuItem
+          project={project}
           title="Merge Requests"
           icon={{ source: GitLabIcons.merge_request, tintColor: Color.PrimaryText }}
           target={<MRList scope={MRScope.all} project={project} />}
         />
         <ProjectNavMenuItem
+          project={project}
           title="Branches"
           icon={{ source: GitLabIcons.branches, tintColor: Color.PrimaryText }}
           target={<BranchList project={project} />}
         />
         <ProjectNavMenuItem
+          project={project}
           title="Pipelines"
           icon={{ source: GitLabIcons.ci, tintColor: Color.PrimaryText }}
           target={<PipelineList projectFullPath={project.fullPath} />}
         />
         <ProjectNavMenuItem
+          project={project}
           title="Milestones"
           icon={{ source: GitLabIcons.milestone, tintColor: Color.PrimaryText }}
           target={<MilestoneList project={project} />}
         />
         <ProjectNavMenuItem
+          project={project}
           title="Labels"
           icon={{ source: GitLabIcons.labels, tintColor: Color.PrimaryText }}
           target={<ProjectLabelList project={project} />}

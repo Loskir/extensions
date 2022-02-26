@@ -22,6 +22,11 @@ import { getVSCodeAppPath } from "../vscode";
 import { GitLabOpenInBrowserAction } from "./actions";
 import { ProjectLabelList } from "./project_label";
 import { ProjectNavMenusList } from "./project_nav";
+import { IssueList, IssueScope } from "./issues";
+import { MRList, MRScope } from "./mr";
+import { BranchList } from "./branch";
+import { PipelineList } from "./pipelines";
+import { MilestoneList } from "./milestones";
 
 function CloneURLInVSCodeListItem(props: { url?: string }) {
   const clone = async (url: string) => {
@@ -142,4 +147,47 @@ export function ProjectDefaultActions(props: { project: Project }): JSX.Element 
       </React.Fragment>
     );
   }
+}
+
+export function ProjectNavigationActions({ project }: { project: Project }): JSX.Element {
+  return (
+    <>
+      <PushAction
+        title="Issues"
+        shortcut={{ modifiers: ["cmd"], key: "i" }}
+        icon={{ source: GitLabIcons.issue, tintColor: Color.PrimaryText }}
+        target={<IssueList scope={IssueScope.all} project={project} />}
+        key="issues"
+      />
+      <PushAction
+        title="Merge Requests"
+        shortcut={{ modifiers: ["cmd"], key: "m" }}
+        icon={{ source: GitLabIcons.merge_request, tintColor: Color.PrimaryText }}
+        target={<MRList scope={MRScope.all} project={project} />}
+        key="mr"
+      />
+      <PushAction
+        title="Branches"
+        shortcut={{ modifiers: ["cmd"], key: "b" }}
+        icon={{ source: GitLabIcons.branches, tintColor: Color.PrimaryText }}
+        target={<BranchList project={project} />}
+        key="branches"
+      />
+      <PushAction
+        title="Pipelines"
+        shortcut={{ modifiers: ["cmd"], key: "p" }}
+        icon={{ source: GitLabIcons.ci, tintColor: Color.PrimaryText }}
+        target={<PipelineList projectFullPath={project.fullPath} />}
+        key="pipelines"
+      />
+      <PushAction
+        title="Milestones"
+        shortcut={{ modifiers: ["cmd"], key: "s" }}
+        icon={{ source: GitLabIcons.milestone, tintColor: Color.PrimaryText }}
+        target={<MilestoneList project={project} />}
+        key="milestones"
+      />
+      <ShowProjectLabels project={project} shortcut={{ modifiers: ["cmd"], key: "l" }} key="labels" />
+    </>
+  );
 }
