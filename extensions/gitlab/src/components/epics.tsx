@@ -1,21 +1,14 @@
-import {
-  ActionPanel,
-  Color,
-  CopyToClipboardAction,
-  Image,
-  ImageMask,
-  List,
-  OpenInBrowserAction,
-  showToast,
-  ToastStyle,
-} from "@raycast/api";
+import { ActionPanel, Color, CopyToClipboardAction, Image, ImageMask, List, showToast, ToastStyle } from "@raycast/api";
 import { useState } from "react";
 import { useCache } from "../cache";
 import { gitlab } from "../common";
 import { Epic, Group, searchData } from "../gitlabapi";
 import { GitLabIcons } from "../icons";
+import { GitLabOpenInBrowserAction } from "./actions";
 import { ClearLocalCacheAction } from "./cache_actions";
 import { CreateEpicTodoAction } from "./epic_actions";
+
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
 function getIcon(state: string): Image {
   if (state == "opened") {
@@ -37,7 +30,7 @@ export function EpicListItem(props: { epic: any }) {
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <OpenInBrowserAction url={epic.web_url} />
+            <GitLabOpenInBrowserAction url={epic.web_url} />
             <CreateEpicTodoAction epic={epic} shortcut={{ modifiers: ["cmd"], key: "t" }} />
           </ActionPanel.Section>
           <ActionPanel.Section>

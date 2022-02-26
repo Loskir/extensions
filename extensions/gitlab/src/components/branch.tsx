@@ -1,9 +1,12 @@
-import { ActionPanel, List, OpenInBrowserAction, Image, Color, showToast, ToastStyle } from "@raycast/api";
+import { ActionPanel, List, Image, Color, showToast, ToastStyle } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { Project } from "../gitlabapi";
 import { gitlab } from "../common";
 import { GitLabIcons } from "../icons";
 import { CreateMRAction } from "./branch_actions";
+import { GitLabOpenInBrowserAction } from "./actions";
+
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
 function getIcon(merged: boolean): Image {
   if (merged) {
@@ -32,7 +35,7 @@ export function BranchListItem(props: { branch: any; project: Project }) {
       actions={
         <ActionPanel>
           <CreateMRAction project={props.project} branch={branch} />
-          <OpenInBrowserAction url={branch.web_url} />
+          <GitLabOpenInBrowserAction url={branch.web_url} />
         </ActionPanel>
       }
     />

@@ -1,22 +1,15 @@
-import {
-  ActionPanel,
-  List,
-  OpenInBrowserAction,
-  Icon,
-  Image,
-  Color,
-  showToast,
-  ToastStyle,
-  PushAction,
-} from "@raycast/api";
+import { ActionPanel, List, Icon, Image, Color, showToast, ToastStyle, PushAction } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { getCIRefreshInterval, gitlabgql } from "../common";
 import { gql } from "@apollo/client";
-import { getIdFromGqlId, now } from "../utils";
+import { getErrorMessage, getIdFromGqlId, now } from "../utils";
 import { JobList } from "./jobs";
 import { RefreshPipelinesAction } from "./pipeline_actions";
 import useInterval from "use-interval";
+import { GitLabOpenInBrowserAction } from "./actions";
 import { GitLabIcons } from "../icons";
+
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
 const GET_PIPELINES = gql`
   query GetProjectPipeplines($fullPath: ID!) {
@@ -68,12 +61,16 @@ function getStatusText(status: string) {
   }
 }
 
-export function PipelineListItem(props: { pipeline: any; projectFullPath: string; onRefreshPipelines: () => void }) {
+export function PipelineListItem(props: {
+  pipeline: any;
+  projectFullPath: string;
+  onRefreshPipelines: () => void;
+}): JSX.Element {
   const pipeline = props.pipeline;
   const icon = getIcon(pipeline.status);
   return (
     <List.Item
-      id={pipeline.id.toString()}
+      id={`${pipeline.id}`}
       title={pipeline.id.toString()}
       icon={icon}
       subtitle={pipeline.ref || ""}
@@ -86,7 +83,7 @@ export function PipelineListItem(props: { pipeline: any; projectFullPath: string
               target={<JobList projectFullPath={props.projectFullPath} pipelineIID={pipeline.iid} />}
               icon={{ source: Icon.Terminal, tintColor: Color.PrimaryText }}
             />
-            <OpenInBrowserAction url={pipeline.webUrl} />
+            <GitLabOpenInBrowserAction url={pipeline.webUrl} />
           </ActionPanel.Section>
           <ActionPanel.Section>
             <RefreshPipelinesAction onRefreshPipelines={props.onRefreshPipelines} />
@@ -97,7 +94,7 @@ export function PipelineListItem(props: { pipeline: any; projectFullPath: string
   );
 }
 
-export function PipelineList(props: { projectFullPath: string }) {
+export function PipelineList(props: { projectFullPath: string }): JSX.Element {
   const { pipelines, error, isLoading, refresh } = useSearch("", props.projectFullPath);
   useInterval(() => {
     refresh();
@@ -167,9 +164,9 @@ export function useSearch(
         if (!didUnmount) {
           setPipelines(glData);
         }
-      } catch (e: any) {
+      } catch (e) {
         if (!didUnmount) {
-          setError(e.message);
+          setError(getErrorMessage(e));
         }
       } finally {
         if (!didUnmount) {

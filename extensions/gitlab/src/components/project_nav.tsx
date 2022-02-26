@@ -1,4 +1,4 @@
-import { ActionPanel, Color, ImageLike, KeyboardShortcut, List, OpenInBrowserAction, PushAction } from "@raycast/api";
+import { ActionPanel, Color, ImageLike, KeyboardShortcut, List, PushAction } from "@raycast/api";
 import { Project } from "../gitlabapi";
 import { gitlabgql } from "../common";
 import { ReactNode } from "react";
@@ -8,14 +8,15 @@ import { MilestoneList } from "./milestones";
 import { MRList, MRScope } from "./mr";
 import { IssueList, IssueScope } from "./issues";
 import { GitLabIcons } from "../icons";
+import { GitLabOpenInBrowserAction } from "./actions";
+import { ProjectLabelList } from "./project_label";
 
 export function ProjectNavMenuItem(props: {
   title: string;
   shortcut?: KeyboardShortcut | undefined;
-  project: Project;
   target: ReactNode;
   icon?: ImageLike;
-}) {
+}): JSX.Element {
   return (
     <List.Item
       title={props.title}
@@ -34,14 +35,14 @@ export function ProjectNavMenuBrowserItem(props: {
   shortcut?: KeyboardShortcut | undefined;
   url: string;
   icon?: ImageLike;
-}) {
+}): JSX.Element {
   return (
     <List.Item
       title={props.title}
       icon={props.icon}
       actions={
         <ActionPanel>
-          <OpenInBrowserAction url={props.url} shortcut={props.shortcut} />
+          <GitLabOpenInBrowserAction url={props.url} shortcut={props.shortcut} />
         </ActionPanel>
       }
     />
@@ -52,53 +53,49 @@ function webUrl(project: Project, partial: string) {
   return gitlabgql.urlJoin(`${project.fullPath}/${partial}`);
 }
 
-export function ProjectNavMenusList(props: { project: Project }) {
+export function ProjectNavMenusList(props: { project: Project }): JSX.Element {
+  const project = props.project;
   return (
     <List navigationTitle="Project Menus">
       <ProjectNavMenuItem
         title="Issues"
-        project={props.project}
         icon={{ source: GitLabIcons.issue, tintColor: Color.PrimaryText }}
-        target={<IssueList scope={IssueScope.all} project={props.project} />}
+        target={<IssueList scope={IssueScope.all} project={project} />}
       />
       <ProjectNavMenuItem
         title="Merge Requests"
-        project={props.project}
         icon={{ source: GitLabIcons.merge_request, tintColor: Color.PrimaryText }}
-        target={<MRList scope={MRScope.all} project={props.project} />}
+        target={<MRList scope={MRScope.all} project={project} />}
       />
       <ProjectNavMenuItem
         title="Branches"
-        project={props.project}
         icon={{ source: GitLabIcons.branches, tintColor: Color.PrimaryText }}
-        target={<BranchList project={props.project} />}
+        target={<BranchList project={project} />}
       />
       <ProjectNavMenuItem
         title="Pipelines"
-        project={props.project}
         icon={{ source: GitLabIcons.ci, tintColor: Color.PrimaryText }}
-        target={<PipelineList projectFullPath={props.project.fullPath} />}
+        target={<PipelineList projectFullPath={project.fullPath} />}
       />
       <ProjectNavMenuItem
         title="Milestones"
-        project={props.project}
         icon={{ source: GitLabIcons.milestone, tintColor: Color.PrimaryText }}
-        target={<MilestoneList project={props.project} />}
+        target={<MilestoneList project={project} />}
       />
-      <ProjectNavMenuBrowserItem
+      <ProjectNavMenuItem
         title="Labels"
         icon={{ source: GitLabIcons.labels, tintColor: Color.PrimaryText }}
-        url={webUrl(props.project, "-/labels")}
+        target={<ProjectLabelList project={project} />}
       />
       <ProjectNavMenuBrowserItem
         title="Security & Compliance"
         icon={{ source: GitLabIcons.security, tintColor: Color.PrimaryText }}
-        url={webUrl(props.project, "-/security/discover")}
+        url={webUrl(project, "-/security/discover")}
       />
       <ProjectNavMenuBrowserItem
         title="Settings"
         icon={{ source: GitLabIcons.settings, tintColor: Color.PrimaryText }}
-        url={webUrl(props.project, "edit")}
+        url={webUrl(project, "edit")}
       />
     </List>
   );

@@ -1,20 +1,11 @@
-import {
-  ActionPanel,
-  List,
-  OpenInBrowserAction,
-  Icon,
-  Image,
-  Color,
-  showToast,
-  ToastStyle,
-  ListSection,
-} from "@raycast/api";
+import { ActionPanel, List, Icon, Image, Color, showToast, ToastStyle, ListSection } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { getCIRefreshInterval, gitlabgql } from "../common";
 import { gql } from "@apollo/client";
-import { getIdFromGqlId, now } from "../utils";
+import { getErrorMessage, getIdFromGqlId, now } from "../utils";
 import { RefreshJobsAction } from "./job_actions";
 import useInterval from "use-interval";
+import { GitLabOpenInBrowserAction } from "./actions";
 import { GitLabIcons } from "../icons";
 
 export interface Job {
@@ -90,7 +81,7 @@ function getStatusText(status: string) {
   }
 }
 
-export function JobListItem(props: { job: Job; projectFullPath: string; onRefreshJobs: () => void }) {
+export function JobListItem(props: { job: Job; projectFullPath: string; onRefreshJobs: () => void }): JSX.Element {
   const job = props.job;
   const icon = getIcon(job.status);
   const subtitle = "#" + getIdFromGqlId(job.id);
@@ -105,7 +96,9 @@ export function JobListItem(props: { job: Job; projectFullPath: string; onRefres
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <OpenInBrowserAction url={gitlabgql.urlJoin(`${props.projectFullPath}/-/jobs/${getIdFromGqlId(job.id)}`)} />
+            <GitLabOpenInBrowserAction
+              url={gitlabgql.urlJoin(`${props.projectFullPath}/-/jobs/${getIdFromGqlId(job.id)}`)}
+            />
           </ActionPanel.Section>
           <ActionPanel.Section>
             <RefreshJobsAction onRefreshJobs={props.onRefreshJobs} />
@@ -116,7 +109,7 @@ export function JobListItem(props: { job: Job; projectFullPath: string; onRefres
   );
 }
 
-export function JobList(props: { projectFullPath: string; pipelineIID: string }) {
+export function JobList(props: { projectFullPath: string; pipelineIID: string }): JSX.Element {
   const { stages, error, isLoading, refresh } = useSearch("", props.projectFullPath, props.pipelineIID);
   useInterval(() => {
     refresh();
@@ -187,9 +180,9 @@ export function useSearch(
         if (!didUnmount) {
           setStages(stages);
         }
-      } catch (e: any) {
+      } catch (e) {
         if (!didUnmount) {
-          setError(e.message);
+          setError(getErrorMessage(e));
         }
       } finally {
         if (!didUnmount) {

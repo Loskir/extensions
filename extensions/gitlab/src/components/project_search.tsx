@@ -1,17 +1,8 @@
-import {
-  ActionPanel,
-  CopyToClipboardAction,
-  List,
-  OpenInBrowserAction,
-  showToast,
-  ToastStyle,
-  PushAction,
-  Color,
-} from "@raycast/api";
+import { ActionPanel, CopyToClipboardAction, List, showToast, ToastStyle, PushAction, Color } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { gitlab, gitlabgql } from "../common";
 import { Project } from "../gitlabapi";
-import { projectIcon } from "../utils";
+import { getErrorMessage, projectIcon } from "../utils";
 import { PipelineList } from "./pipelines";
 import { BranchList } from "./branch";
 import { MilestoneList } from "./milestones";
@@ -21,12 +12,13 @@ import { IssueList, IssueScope } from "./issues";
 import { CloneProjectInGitPod, CloneProjectInVSCodeAction, ShowProjectLabels } from "./project_actions";
 import { GitLabIcons } from "../icons";
 import { ClearLocalCacheAction } from "./cache_actions";
+import { GitLabOpenInBrowserAction } from "./actions";
 
 function webUrl(project: Project, partial: string) {
   return gitlabgql.urlJoin(`${project.fullPath}/${partial}`);
 }
 
-export function ProjectListItem(props: { project: Project }) {
+export function ProjectListItem(props: { project: Project }): JSX.Element {
   const project = props.project;
   return (
     <List.Item
@@ -37,7 +29,7 @@ export function ProjectListItem(props: { project: Project }) {
       actions={
         <ActionPanel>
           <ActionPanel.Section title={project.name_with_namespace}>
-            <OpenInBrowserAction url={project.web_url} />
+            <GitLabOpenInBrowserAction url={project.web_url} />
             <PushAction
               title="Explore"
               icon={{ source: GitLabIcons.explorer, tintColor: Color.PrimaryText }}
@@ -81,17 +73,17 @@ export function ProjectListItem(props: { project: Project }) {
             <ShowProjectLabels project={props.project} shortcut={{ modifiers: ["cmd"], key: "l" }} />
           </ActionPanel.Section>
           <ActionPanel.Section title="Open in Browser">
-            <OpenInBrowserAction
+            <GitLabOpenInBrowserAction
               title="Labels"
               icon={{ source: GitLabIcons.labels, tintColor: Color.PrimaryText }}
               url={webUrl(props.project, "-/labels")}
             />
-            <OpenInBrowserAction
+            <GitLabOpenInBrowserAction
               title="Security & Compliance"
               icon={{ source: GitLabIcons.security, tintColor: Color.PrimaryText }}
               url={webUrl(props.project, "-/security/discover")}
             />
-            <OpenInBrowserAction
+            <GitLabOpenInBrowserAction
               title="Settings"
               icon={{ source: GitLabIcons.settings, tintColor: Color.PrimaryText }}
               url={webUrl(props.project, "edit")}
@@ -110,7 +102,7 @@ export function ProjectListItem(props: { project: Project }) {
   );
 }
 
-export function ProjectSearchList() {
+export function ProjectSearchList(): JSX.Element {
   const [searchText, setSearchText] = useState<string>();
   const { projects, error, isLoading } = useSearch(searchText);
 
@@ -164,9 +156,9 @@ export function useSearch(query: string | undefined): {
         if (!didUnmount) {
           setProjects(glProjects);
         }
-      } catch (e: any) {
+      } catch (e) {
         if (!didUnmount) {
-          setError(e.message);
+          setError(getErrorMessage(e));
         }
       } finally {
         if (!didUnmount) {

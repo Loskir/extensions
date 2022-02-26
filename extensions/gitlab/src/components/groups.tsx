@@ -1,25 +1,16 @@
-import {
-  ActionPanel,
-  Color,
-  CopyToClipboardAction,
-  Icon,
-  ImageLike,
-  ImageMask,
-  List,
-  OpenInBrowserAction,
-  PushAction,
-  showToast,
-  ToastStyle,
-} from "@raycast/api";
+import { ActionPanel, Color, CopyToClipboardAction, Icon, List, PushAction, showToast, ToastStyle } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { gitlab, gitlabgql } from "../common";
 import { dataToProject, Group, Project } from "../gitlabapi";
 import { GitLabIcons, useImage } from "../icons";
+import { GitLabOpenInBrowserAction } from "./actions";
 import { EpicList } from "./epics";
 import { IssueList, IssueScope, IssueState } from "./issues";
 import { MilestoneList } from "./milestones";
 import { MRList, MRScope, MRState } from "./mr";
 import { ProjectListItem } from "./project";
+
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
 function groupIconUrl(group: any): string | undefined {
   let result: string | undefined;
@@ -32,24 +23,13 @@ function groupIconUrl(group: any): string | undefined {
   return result;
 }
 
-function groupIcon(group: any): ImageLike {
-  let result: string = GitLabIcons.project;
-  // TODO check also namespace for icon
-  if (group.avatar_url) {
-    result = group.avatar_url;
-  } else if (group.owner && group.owner.avatar_url) {
-    result = group.owner.avatar_url;
-  }
-  return { source: result, mask: ImageMask.Circle };
-}
-
 function webUrl(group: Group, partial: string) {
   return gitlabgql.urlJoin(`groups/${group.full_path}/${partial}`);
 }
 
-export function GroupListItem(props: { group: any }) {
+export function GroupListItem(props: { group: any }): JSX.Element {
   const group = props.group;
-  const { localFilepath: localImageFilepath, error, isLoading } = useImage(groupIconUrl(group), GitLabIcons.project);
+  const { localFilepath: localImageFilepath } = useImage(groupIconUrl(group), GitLabIcons.project);
   return (
     <List.Item
       id={`${group.id}`}
@@ -64,7 +44,7 @@ export function GroupListItem(props: { group: any }) {
               target={<GroupList parentGroup={props.group} />}
               icon={{ source: Icon.Terminal, tintColor: Color.PrimaryText }}
             />
-            <OpenInBrowserAction url={group.web_url} />
+            <GitLabOpenInBrowserAction url={group.web_url} />
           </ActionPanel.Section>
           <ActionPanel.Section>
             <CopyToClipboardAction title="Copy Group ID" content={group.id} />
@@ -94,17 +74,17 @@ export function GroupListItem(props: { group: any }) {
               icon={{ source: GitLabIcons.milestone, tintColor: Color.PrimaryText }}
               target={<MilestoneList group={group} />}
             />
-            <OpenInBrowserAction
+            <GitLabOpenInBrowserAction
               title="Labels"
               icon={{ source: GitLabIcons.labels, tintColor: Color.PrimaryText }}
               url={webUrl(props.group, "-/labels")}
             />
-            <OpenInBrowserAction
+            <GitLabOpenInBrowserAction
               title="Security & Compliance"
               icon={{ source: GitLabIcons.security, tintColor: Color.PrimaryText }}
               url={webUrl(props.group, "-/security/dashboard")}
             />
-            <OpenInBrowserAction
+            <GitLabOpenInBrowserAction
               title="Settings"
               icon={{ source: GitLabIcons.settings, tintColor: Color.PrimaryText }}
               url={webUrl(props.group, "-/edit")}
@@ -116,7 +96,7 @@ export function GroupListItem(props: { group: any }) {
   );
 }
 
-export function GroupList(props: { parentGroup?: Group }) {
+export function GroupList(props: { parentGroup?: Group }): JSX.Element {
   const parentGroup = props.parentGroup;
   const parentGroupID = parentGroup ? parentGroup.id : 0;
   const [searchText, setSearchText] = useState<string>();
