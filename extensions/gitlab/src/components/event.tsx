@@ -21,7 +21,7 @@ import { capitalizeFirstLetter, daysInSeconds } from "../utils";
 import { DefaultActions, GitLabOpenInBrowserAction } from "./actions";
 import { IssueDetailFetch } from "./issues";
 import { MRDetailFetch } from "./mr";
-import { ProjectScreen } from "./project";
+import { OpenProjectAction } from "./project_actions";
 
 /* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
@@ -74,7 +74,7 @@ export function EventListItem(props: { event: Event }): JSX.Element {
   let actionElement: JSX.Element | undefined;
   let openProjectAction: JSX.Element | undefined;
   if (project) {
-    openProjectAction = <PushAction title="Open Project" target={<ProjectScreen project={project} />} />;
+    openProjectAction = <OpenProjectAction project={project} />;
   }
   switch (action_name) {
     case "updated":
