@@ -23,7 +23,7 @@ export function ProjectNavMenuItem(props: {
       icon={props.icon}
       actions={
         <ActionPanel>
-          <PushAction title="Open Menu" shortcut={props.shortcut} target={props.target} />
+          <PushAction title={`Open ${props.title}`} shortcut={props.shortcut} target={props.target} />
         </ActionPanel>
       }
     />
