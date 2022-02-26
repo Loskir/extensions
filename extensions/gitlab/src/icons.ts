@@ -35,6 +35,7 @@ export enum GitLabIcons {
   status_canceled = "status_canceled.png",
   status_skipped = "status_skipped.png",
   status_scheduled = "status_scheduled.png",
+  commit = "commit.png",
 }
 
 async function getImageCacheDirectory(ensureDirectory = false): Promise<string> {
