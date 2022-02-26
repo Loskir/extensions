@@ -72,9 +72,9 @@ export function EventListItem(props: { event: Event }): JSX.Element {
   let icon: ImageLike | undefined;
   const action_name = ev.action_name;
   let actionElement: JSX.Element | undefined;
-  const actionElements: JSX.Element[] = [];
+  let openProjectAction: JSX.Element | undefined;
   if (project) {
-    actionElements.push(<PushAction title="Open Project" target={<ProjectScreen project={project} />} />);
+    openProjectAction = <PushAction title="Open Project" target={<ProjectScreen project={project} />} />;
   }
   switch (action_name) {
     case "updated":
@@ -125,6 +125,7 @@ export function EventListItem(props: { event: Event }): JSX.Element {
             if (project && !error && ev.action_name !== "deleted") {
               actionElement = (
                 <DefaultActions
+                  action={openProjectAction}
                   webAction={
                     <GitLabOpenInBrowserAction
                       url={`${project.web_url}/-/tree/${ref}`}
@@ -154,6 +155,7 @@ export function EventListItem(props: { event: Event }): JSX.Element {
         if (project && !error && ev.action_name !== "deleted") {
           actionElement = (
             <DefaultActions
+              action={openProjectAction}
               webAction={<GitLabOpenInBrowserAction url={`${project.web_url}`} title="Open Project in Browser" />}
             />
           );
@@ -266,6 +268,7 @@ export function EventListItem(props: { event: Event }): JSX.Element {
             if (project && !error) {
               actionElement = (
                 <DefaultActions
+                  action={openProjectAction}
                   webAction={
                     <GitLabOpenInBrowserAction
                       url={`${project.web_url}/-/milestones/${ev.target_iid}`}
@@ -409,12 +412,7 @@ export function EventListItem(props: { event: Event }): JSX.Element {
       title={title || ""}
       icon={icon}
       accessoryTitle={accessoryTitle}
-      actions={
-        <ActionPanel>
-          {actionElement && actionElement}
-          {...actionElements}
-        </ActionPanel>
-      }
+      actions={<ActionPanel>{actionElement && actionElement}</ActionPanel>}
     />
   );
 }
