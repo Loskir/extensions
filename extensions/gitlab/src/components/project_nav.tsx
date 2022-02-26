@@ -57,46 +57,50 @@ export function ProjectNavMenusList(props: { project: Project }): JSX.Element {
   const project = props.project;
   return (
     <List navigationTitle={`Project ${project.fullPath}`}>
-      <ProjectNavMenuItem
-        title="Issues"
-        icon={{ source: GitLabIcons.issue, tintColor: Color.PrimaryText }}
-        target={<IssueList scope={IssueScope.all} project={project} />}
-      />
-      <ProjectNavMenuItem
-        title="Merge Requests"
-        icon={{ source: GitLabIcons.merge_request, tintColor: Color.PrimaryText }}
-        target={<MRList scope={MRScope.all} project={project} />}
-      />
-      <ProjectNavMenuItem
-        title="Branches"
-        icon={{ source: GitLabIcons.branches, tintColor: Color.PrimaryText }}
-        target={<BranchList project={project} />}
-      />
-      <ProjectNavMenuItem
-        title="Pipelines"
-        icon={{ source: GitLabIcons.ci, tintColor: Color.PrimaryText }}
-        target={<PipelineList projectFullPath={project.fullPath} />}
-      />
-      <ProjectNavMenuItem
-        title="Milestones"
-        icon={{ source: GitLabIcons.milestone, tintColor: Color.PrimaryText }}
-        target={<MilestoneList project={project} />}
-      />
-      <ProjectNavMenuItem
-        title="Labels"
-        icon={{ source: GitLabIcons.labels, tintColor: Color.PrimaryText }}
-        target={<ProjectLabelList project={project} />}
-      />
-      <ProjectNavMenuBrowserItem
-        title="Security & Compliance"
-        icon={{ source: GitLabIcons.security, tintColor: Color.PrimaryText }}
-        url={webUrl(project, "-/security/discover")}
-      />
-      <ProjectNavMenuBrowserItem
-        title="Settings"
-        icon={{ source: GitLabIcons.settings, tintColor: Color.PrimaryText }}
-        url={webUrl(project, "edit")}
-      />
+      <List.Section>
+        <ProjectNavMenuItem
+          title="Issues"
+          icon={{ source: GitLabIcons.issue, tintColor: Color.PrimaryText }}
+          target={<IssueList scope={IssueScope.all} project={project} />}
+        />
+        <ProjectNavMenuItem
+          title="Merge Requests"
+          icon={{ source: GitLabIcons.merge_request, tintColor: Color.PrimaryText }}
+          target={<MRList scope={MRScope.all} project={project} />}
+        />
+        <ProjectNavMenuItem
+          title="Branches"
+          icon={{ source: GitLabIcons.branches, tintColor: Color.PrimaryText }}
+          target={<BranchList project={project} />}
+        />
+        <ProjectNavMenuItem
+          title="Pipelines"
+          icon={{ source: GitLabIcons.ci, tintColor: Color.PrimaryText }}
+          target={<PipelineList projectFullPath={project.fullPath} />}
+        />
+        <ProjectNavMenuItem
+          title="Milestones"
+          icon={{ source: GitLabIcons.milestone, tintColor: Color.PrimaryText }}
+          target={<MilestoneList project={project} />}
+        />
+        <ProjectNavMenuItem
+          title="Labels"
+          icon={{ source: GitLabIcons.labels, tintColor: Color.PrimaryText }}
+          target={<ProjectLabelList project={project} />}
+        />
+      </List.Section>
+      <List.Section title="Open in Browser">
+        <ProjectNavMenuBrowserItem
+          title="Security & Compliance"
+          icon={{ source: GitLabIcons.security, tintColor: Color.PrimaryText }}
+          url={webUrl(project, "-/security/discover")}
+        />
+        <ProjectNavMenuBrowserItem
+          title="Settings"
+          icon={{ source: GitLabIcons.settings, tintColor: Color.PrimaryText }}
+          url={webUrl(project, "edit")}
+        />
+      </List.Section>
     </List>
   );
 }
