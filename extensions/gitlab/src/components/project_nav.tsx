@@ -56,7 +56,7 @@ function webUrl(project: Project, partial: string) {
 export function ProjectNavMenusList(props: { project: Project }): JSX.Element {
   const project = props.project;
   return (
-    <List navigationTitle="Project Menus">
+    <List navigationTitle={`Project ${project.fullPath}`}>
       <ProjectNavMenuItem
         title="Issues"
         icon={{ source: GitLabIcons.issue, tintColor: Color.PrimaryText }}
