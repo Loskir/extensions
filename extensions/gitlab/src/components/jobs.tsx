@@ -1,6 +1,6 @@
 import { ActionPanel, List, Icon, Image, Color, showToast, ToastStyle, ListSection, ListItem } from "@raycast/api";
 import { useEffect, useState } from "react";
-import { getCIRefreshInterval, gitlab, gitlabgql } from "../common";
+import { getCIJobRefreshInterval, gitlab, gitlabgql } from "../common";
 import { gql } from "@apollo/client";
 import { getErrorMessage, getIdFromGqlId, now } from "../utils";
 import { RefreshJobsAction } from "./job_actions";
@@ -13,6 +13,7 @@ export interface Job {
   id: string;
   name: string;
   status: string;
+  duration: number | null;
 }
 
 const GET_PIPELINE_JOBS = gql`
@@ -27,6 +28,7 @@ const GET_PIPELINE_JOBS = gql`
                 id
                 name
                 status
+                duration
               }
             }
           }
@@ -73,20 +75,22 @@ function getIcon(status: string): Image {
   */
 }
 
-function getStatusText(status: string) {
+function getStatusText({ status, duration }: Job) {
   const s = status.toLowerCase();
   if (s === "success") {
-    return "passed";
-  } else {
-    return status;
+    return `passed in ${duration}s`;
   }
+  if (s === "running") {
+    return `[${duration}s] ${s}`;
+  }
+  return s;
 }
 
 export function JobListItem(props: { job: Job; projectFullPath: string; onRefreshJobs: () => void }): JSX.Element {
   const job = props.job;
   const icon = getIcon(job.status);
   const subtitle = "#" + getIdFromGqlId(job.id);
-  const status = getStatusText(job.status.toLowerCase());
+  const status = getStatusText(job);
   return (
     <List.Item
       id={job.id}
@@ -175,7 +179,7 @@ export function useSearch(
             stages[stage.name] = [];
           }
           for (const job of stage.jobs.nodes) {
-            stages[stage.name].push({ id: job.id, name: job.name, status: job.status });
+            stages[stage.name].push({ id: job.id, name: job.name, status: job.status, duration: job.duration });
           }
         }
         if (!didUnmount) {
