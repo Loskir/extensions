@@ -53,9 +53,7 @@ export const gitlabgql = createGitLabGQLClient();
 
 const defaultRefreshInterval = 10 * 1000;
 
-export function getCIRefreshInterval(): number | null {
-  const preferences = getPreferenceValues();
-  const userValue = preferences.cirefreshinterval as string;
+function parseInterval(userValue: string): number | null {
   if (!userValue || userValue.length <= 0) {
     return defaultRefreshInterval;
   }
@@ -69,6 +67,17 @@ export function getCIRefreshInterval(): number | null {
   } else {
     return sec * 1000; // ms
   }
+}
+
+export function getCIRefreshInterval(): number | null {
+  const preferences = getPreferenceValues();
+  const userValue = preferences.cirefreshinterval as string;
+  return parseInterval(userValue);
+}
+export function getCIJobRefreshInterval(): number | null {
+  const preferences = getPreferenceValues();
+  const userValue = preferences.cijobrefreshinterval as string;
+  return parseInterval(userValue);
 }
 
 export enum PrimaryAction {

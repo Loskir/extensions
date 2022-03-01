@@ -114,7 +114,7 @@ export function JobList(props: { projectFullPath: string; pipelineIID: string })
   const { stages, error, isLoading, refresh } = useSearch("", props.projectFullPath, props.pipelineIID);
   useInterval(() => {
     refresh();
-  }, getCIRefreshInterval());
+  }, getCIJobRefreshInterval());
   if (error) {
     showToast(ToastStyle.Failure, "Cannot search Pipelines", error);
   }

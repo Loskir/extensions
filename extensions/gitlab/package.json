@@ -159,8 +159,17 @@
       "required": false,
       "default": "10",
       "title": "CI Auto Refresh Interval (sec)",
-      "description": "Refresh interval in seconds for CI Pipeline/Job lists. Values between 1-9 are not recommended. 0 mean no auto refresh at all",
+      "description": "Refresh interval in seconds for CI Pipeline lists. Values between 1-9 are not recommended. 0 mean no auto refresh at all",
       "placeholder": "10"
+    },
+    {
+      "name": "cijobrefreshinterval",
+      "type": "textfield",
+      "required": false,
+      "default": "1",
+      "title": "CI Job Auto Refresh Interval (sec)",
+      "description": "Refresh interval in seconds for CI Job lists. 0 mean no auto refresh at all",
+      "placeholder": "1"
     },
     {
       "name": "primaryaction",
