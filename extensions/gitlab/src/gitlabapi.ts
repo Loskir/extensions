@@ -55,6 +55,10 @@ export function jsonDataToMergeRequest(mr: any): MergeRequest {
     description: mr.description,
     reference_full: mr.references?.full,
     labels: mr.labels as Label[],
+    source_branch: mr.source_branch,
+    target_branch: mr.target_branch,
+    merge_commit_sha: mr.merge_commit_sha,
+    sha: mr.sha,
   };
 }
 
@@ -176,6 +180,10 @@ export class MergeRequest {
   public project_id = 0;
   public reference_full = "";
   public labels: Label[] = [];
+  public source_branch = "";
+  public target_branch = "";
+  public merge_commit_sha = "";
+  public sha = "";
 }
 
 export interface TodoGroup {

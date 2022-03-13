@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { Project } from "../gitlabapi";
 import { gitlab } from "../common";
 import { GitLabIcons } from "../icons";
-import { CreateMRAction } from "./branch_actions";
+import { CreateMRAction, ShowBranchCommitsAction } from "./branch_actions";
 import { GitLabOpenInBrowserAction } from "./actions";
+import { useCommitStatus } from "./commits/utils";
+import { getCIJobStatusIcon } from "./jobs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
@@ -19,6 +21,7 @@ function getIcon(merged: boolean): Image {
 export function BranchListItem(props: { branch: any; project: Project }) {
   const branch = props.branch;
   const icon = getIcon(branch.merged as boolean);
+  const project = props.project;
   const states = [];
   if (branch.default) {
     states.push("[default]");
@@ -26,15 +29,19 @@ export function BranchListItem(props: { branch: any; project: Project }) {
   if (branch.protected) {
     states.push("[protected]");
   }
+  const { commitStatus } = useCommitStatus(project.id, branch?.commit?.id);
+  const statusIcon = commitStatus ? getCIJobStatusIcon(commitStatus.status) : undefined;
   return (
     <List.Item
       id={branch.id}
       title={branch.name}
       subtitle={states.join(" ")}
       icon={icon}
+      accessoryIcon={statusIcon}
       actions={
         <ActionPanel>
-          <CreateMRAction project={props.project} branch={branch} />
+          <ShowBranchCommitsAction projectID={project.id} branch={branch} />
+          <CreateMRAction project={project} branch={branch} />
           <GitLabOpenInBrowserAction url={branch.web_url} />
         </ActionPanel>
       }

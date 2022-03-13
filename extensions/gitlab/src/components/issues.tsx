@@ -1,10 +1,28 @@
-import { ActionPanel, List, Color, showToast, ToastStyle, Detail, PushAction, ImageMask } from "@raycast/api";
+import {
+  ActionPanel,
+  List,
+  Color,
+  showToast,
+  ToastStyle,
+  Detail,
+  PushAction,
+  ImageMask,
+  CopyToClipboardAction,
+} from "@raycast/api";
 import { gql } from "@apollo/client";
 import { useEffect, useState } from "react";
 import { gitlab, gitlabgql } from "../common";
 import { Group, Issue, Project } from "../gitlabapi";
 import { GitLabIcons } from "../icons";
-import { getErrorMessage, now, optimizeMarkdownText, Query, toDateString, tokenizeQueryText } from "../utils";
+import {
+  capitalizeFirstLetter,
+  getErrorMessage,
+  now,
+  optimizeMarkdownText,
+  Query,
+  toDateString,
+  tokenizeQueryText,
+} from "../utils";
 import { IssueItemActions } from "./issue_actions";
 import { GitLabOpenInBrowserAction } from "./actions";
 
@@ -26,6 +44,7 @@ const GET_ISSUE_DETAIL = gql`
   query GetIssueDetail($id: ID!) {
     issue(id: $id) {
       description
+      webUrl
     }
   }
 `;
@@ -42,19 +61,33 @@ export function IssueDetailFetch(props: { project: Project; issueId: number }): 
   }
 }
 
+interface IssueDetailData {
+  description: string;
+  projectWebUrl?: string;
+}
+
 export function IssueDetail(props: { issue: Issue }): JSX.Element {
-  const { description, error, isLoading } = useDetail(props.issue.id);
+  const issue = props.issue;
+  const { issueDetail, error, isLoading } = useDetail(props.issue.id);
   if (error) {
     showToast(ToastStyle.Failure, "Could not get issue details", error);
   }
 
-  const desc = (description ? description : props.issue.description) || "";
+  const desc = (issueDetail?.description ? issueDetail.description : props.issue.description) || "";
 
-  let md = "";
-  if (props.issue) {
-    md = props.issue.labels.map((i) => `\`${i.name || i}\``).join(" ") + "  \n";
+  const lines: string[] = [];
+  if (issue) {
+    lines.push(`# ${issue.title}`);
+    lines.push(`Milestone: ${issue.milestone?.title || "<no milestone>"}`);
+    if (issue.author) {
+      lines.push(`Author: ${issue.author.name} [@${issue.author.username}](${issue.author.web_url})`);
+    }
+    lines.push(`Status: \`${capitalizeFirstLetter(issue.state)}\``);
+    const labels = issue.labels.map((i) => `\`${i.name || i}\``).join(" ") + "  \n";
+    lines.push(`Labels: ${labels || "<No Label>"}`);
+    lines.push("## Description\n" + optimizeMarkdownText(desc, issueDetail?.projectWebUrl));
   }
-  md += "## Description\n" + optimizeMarkdownText(desc);
+  const md = lines.join("  \n");
 
   return (
     <Detail
@@ -65,18 +98,19 @@ export function IssueDetail(props: { issue: Issue }): JSX.Element {
         <ActionPanel>
           <GitLabOpenInBrowserAction url={props.issue.web_url} />
           <IssueItemActions issue={props.issue} />
+          <CopyToClipboardAction title="Copy Issue Description" content={issue.description} />
         </ActionPanel>
       }
     />
   );
 }
 
-export function useDetail(issueID: number): {
-  description?: string;
+function useDetail(issueID: number): {
+  issueDetail?: IssueDetailData;
   error?: string;
   isLoading: boolean;
 } {
-  const [description, setDescription] = useState<string>();
+  const [issueDetail, setIssueDetail] = useState<IssueDetailData>();
   const [error, setError] = useState<string>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -99,8 +133,17 @@ export function useDetail(issueID: number): {
           variables: { id: `gid://gitlab/Issue/${issueID}` },
         });
         const desc = data.data.issue.description || "<no description>";
+        const webUrl = (data.data.issue.webUrl as string) || "";
+        let projectWebUrl: string | undefined;
+        const index = webUrl.indexOf("/-/");
+        if (index > 1) {
+          projectWebUrl = webUrl.substring(0, index);
+        }
         if (!didUnmount) {
-          setDescription(desc);
+          setIssueDetail({
+            description: desc,
+            projectWebUrl: projectWebUrl,
+          });
         }
       } catch (e) {
         if (!didUnmount) {
@@ -120,7 +163,7 @@ export function useDetail(issueID: number): {
     };
   }, [issueID]);
 
-  return { description, error, isLoading };
+  return { issueDetail, error, isLoading };
 }
 
 export function IssueListItem(props: { issue: Issue; refreshData: () => void }): JSX.Element {

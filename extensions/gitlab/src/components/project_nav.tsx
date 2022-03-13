@@ -11,6 +11,7 @@ import { GitLabIcons } from "../icons";
 import { GitLabOpenInBrowserAction } from "./actions";
 import { ProjectLabelList } from "./project_label";
 import { ProjectNavigationActions } from "./project_actions";
+import { ProjectCommitList } from "./commits/list";
 
 export function ProjectNavMenuItem(props: {
   title: string;
@@ -80,6 +81,12 @@ export function ProjectNavMenusList(props: { project: Project }): JSX.Element {
           title="Branches"
           icon={{ source: GitLabIcons.branches, tintColor: Color.PrimaryText }}
           target={<BranchList project={project} />}
+        />
+        <ProjectNavMenuItem
+          project={project}
+          title="Commits"
+          icon={{ source: GitLabIcons.commit, tintColor: Color.PrimaryText }}
+          target={<ProjectCommitList projectID={project.id} />}
         />
         <ProjectNavMenuItem
           project={project}
