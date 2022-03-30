@@ -1,8 +1,8 @@
-import { ActionPanel, List, Icon, Image, Color, showToast, ToastStyle, ListSection, ListItem } from "@raycast/api";
+import { ActionPanel, List, Icon, Image, Color, showToast, Toast } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { getCIJobRefreshInterval, gitlab, gitlabgql } from "../common";
 import { gql } from "@apollo/client";
-import { getErrorMessage, getIdFromGqlId, now } from "../utils";
+import { ensureCleanAccessories, getErrorMessage, getIdFromGqlId, now } from "../utils";
 import { RefreshJobsAction } from "./job_actions";
 import useInterval from "use-interval";
 import { GitLabOpenInBrowserAction } from "./actions";
@@ -75,6 +75,46 @@ export function getCIJobStatusIcon(status: string): Image {
   */
 }
 
+export function getCIJobStatusEmoji(status: string): string {
+  switch (status.toLowerCase()) {
+    case "success": {
+      return "✅";
+    }
+    case "created": {
+      return "🔨";
+    }
+    case "pending": {
+      return "⏰";
+    }
+    case "running": {
+      return "🔄";
+    }
+    case "failed": {
+      return "❌";
+    }
+    case "canceled": {
+      return "🛑";
+    }
+    case "skipped": {
+      return "➡️";
+    }
+    case "scheduled": {
+      return "🕐";
+    }
+    case "manual": {
+      return "👨‍💼";
+    }
+    default:
+      console.log(status);
+      return "💼";
+  }
+  /*
+  missing 
+  * WAITING_FOR_RESOURCE
+  * PREPARING
+  */
+}
+
 function getStatusText({ status, duration }: Job) {
   const s = status.toLowerCase();
   if (s === "success") {
@@ -97,7 +137,7 @@ export function JobListItem(props: { job: Job; projectFullPath: string; onRefres
       icon={icon}
       title={job.name}
       subtitle={subtitle}
-      accessoryTitle={status}
+      accessories={ensureCleanAccessories([{ text: status }])}
       actions={
         <ActionPanel>
           <ActionPanel.Section>
@@ -120,16 +160,16 @@ export function JobList(props: { projectFullPath: string; pipelineIID: string })
     refresh();
   }, getCIJobRefreshInterval());
   if (error) {
-    showToast(ToastStyle.Failure, "Cannot search Pipelines", error);
+    showToast(Toast.Style.Failure, "Cannot search Pipelines", error);
   }
   return (
     <List isLoading={isLoading} navigationTitle="Jobs">
       {Object.keys(stages).map((stagekey) => (
-        <ListSection key={stagekey} title={stagekey}>
+        <List.Section key={stagekey} title={stagekey}>
           {stages[stagekey].map((job) => (
             <JobListItem job={job} projectFullPath={props.projectFullPath} onRefreshJobs={refresh} key={job.id} />
           ))}
-        </ListSection>
+        </List.Section>
       ))}
     </List>
   );
@@ -231,7 +271,7 @@ interface Commit {
 export function PipelineJobsListByCommit(props: { project: Project; sha: string }): JSX.Element {
   const { commit, isLoading, error } = useCommit(props.project.id, props.sha);
   if (error) {
-    showToast(ToastStyle.Failure, "Could not fetch Commit Details", error);
+    showToast(Toast.Style.Failure, "Could not fetch Commit Details", error);
   }
   if (isLoading || !commit) {
     return <List isLoading={isLoading} searchBarPlaceholder="Loading" />;
@@ -241,7 +281,7 @@ export function PipelineJobsListByCommit(props: { project: Project; sha: string 
     } else {
       return (
         <List>
-          <ListItem title="No piplelines attached" />
+          <List.Item title="No piplelines attached" />
         </List>
       );
     }

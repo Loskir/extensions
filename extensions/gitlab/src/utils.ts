@@ -1,4 +1,4 @@
-import { getLocalStorageItem, ImageLike, ImageMask, setLocalStorageItem } from "@raycast/api";
+import { Image, List, LocalStorage } from "@raycast/api";
 import { Project } from "./gitlabapi";
 import { GitLabIcons } from "./icons";
 import * as fs from "fs/promises";
@@ -25,7 +25,7 @@ export function projectIconUrl(project: Project): string | undefined {
   return result;
 }
 
-export function projectIcon(project: Project): ImageLike {
+export function projectIcon(project: Project): Image.ImageLike {
   let result: string = GitLabIcons.project;
   // TODO check also namespace for icon
   if (project.avatar_url) {
@@ -33,12 +33,13 @@ export function projectIcon(project: Project): ImageLike {
   } else if (project.owner && project.owner.avatar_url) {
     result = project.owner.avatar_url;
   }
-  return { source: result, mask: ImageMask.Circle };
+  return { source: result, mask: Image.Mask.Circle };
 }
 
-export function toDateString(d: Date): string {
-  const mo = new Intl.DateTimeFormat("en", { month: "short" }).format(d);
-  const da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(d);
+export function toDateString(d: string): string {
+  const date = new Date(d);
+  const mo = new Intl.DateTimeFormat("en", { month: "short" }).format(date);
+  const da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${da}. ${mo}`;
 }
 
@@ -53,7 +54,7 @@ export function currentSeconds(): number {
 
 export async function getCacheObject(key: string, seconds: number): Promise<any> {
   console.log(`get cache object ${key} from store`);
-  const cache = await getLocalStorageItem(key);
+  const cache = await LocalStorage.getItem(key);
   console.log("after local storage");
   console.log(cache);
   if (cache) {
@@ -78,7 +79,7 @@ export async function setCacheObject(key: string, payload: any): Promise<void> {
   console.log(cache_data);
   const text = JSON.stringify(cache_data);
   console.log(text.length);
-  await setLocalStorageItem(key, text);
+  await LocalStorage.setItem(key, text);
 }
 
 export async function fileExists(filename: string): Promise<boolean> {
@@ -261,4 +262,25 @@ export function now(): Date {
 
 export function daysInSeconds(days: number): number {
   return days * 24 * 60 * 60;
+}
+
+export function ensureCleanAccessories(
+  accessories: List.Item.Accessory[] | undefined
+): List.Item.Accessory[] | undefined {
+  if (accessories) {
+    if (accessories.length <= 0) {
+      return undefined;
+    }
+    const result: List.Item.Accessory[] = [];
+    for (const a of accessories) {
+      if (a.icon || a.text) {
+        result.push(a);
+      }
+    }
+    if (result.length <= 0) {
+      return undefined;
+    }
+    return result;
+  }
+  return undefined;
 }

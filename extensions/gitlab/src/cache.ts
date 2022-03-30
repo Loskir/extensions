@@ -3,7 +3,17 @@ import path from "path/posix";
 import * as fs from "fs/promises";
 import { constants } from "fs";
 import { currentSeconds, daysInSeconds, fileExists, getErrorMessage } from "./utils";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
+
+const logCaching = false;
+
+export function cacheLog(message?: any, ...optionalParams: any[]): void {
+  if (logCaching) {
+    console.log(message, ...optionalParams);
+  }
+}
 
 export function getLargeCacheDirectory(): string {
   const sp = environment.supportPath;
@@ -14,7 +24,7 @@ export function getLargeCacheDirectory(): string {
 export async function getCacheFilepath(key: string, ensureDirectory = false): Promise<string> {
   const cacheDir = getLargeCacheDirectory();
   if (ensureDirectory) {
-    console.log(`create cache directoy '${cacheDir}'`);
+    cacheLog(`create cache directoy '${cacheDir}'`);
     await fs.mkdir(cacheDir, { recursive: true });
   }
   const cacheFilePath = path.join(cacheDir, `${key}.json`);
@@ -36,14 +46,14 @@ export async function getLargeCacheObjectData(key: string): Promise<{ data: any;
     const delta = timestamp - cache_data.timestamp;
     return { data: cache_data.payload, ageInSeconds: delta };
   } catch (e) {
-    console.log(`could not access cache file or not exists '${cacheFilePath}'`);
+    cacheLog(`could not access cache file or not exists '${cacheFilePath}'`);
   }
   return undefined;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getLargeCacheObject(key: string, seconds: number): Promise<any> {
-  console.log("GET cache");
+  cacheLog("GET cache");
   let cacheFilePath = undefined;
   try {
     cacheFilePath = await getCacheFilepath(key);
@@ -61,7 +71,7 @@ export async function getLargeCacheObject(key: string, seconds: number): Promise
       return cache_data.payload;
     }
   } catch (e) {
-    console.log(`could not access cache file or not exists '${cacheFilePath}'`);
+    cacheLog(`could not access cache file or not exists '${cacheFilePath}'`);
   }
   return undefined;
 }
@@ -71,7 +81,7 @@ export async function setLargeCacheObject(key: string, payload: any): Promise<vo
   let cacheFilePath = undefined;
   try {
     cacheFilePath = await getCacheFilepath(key, true);
-    console.log(`set cache object '${key}'`);
+    cacheLog(`set cache object '${key}'`);
     const cache_data = {
       timestamp: currentSeconds(),
       payload: payload,
@@ -79,8 +89,8 @@ export async function setLargeCacheObject(key: string, payload: any): Promise<vo
     const text = JSON.stringify(cache_data);
     await fs.writeFile(cacheFilePath, text, "utf-8");
   } catch (e) {
-    console.log(e);
-    console.log(`could not write cache file '${cacheFilePath}'`);
+    cacheLog(e);
+    cacheLog(`could not write cache file '${cacheFilePath}'`);
   }
 }
 
@@ -92,7 +102,7 @@ export async function receiveLargeCachedObject(key: string, fn: () => Promise<an
     await setLargeCacheObject(key, data);
     return data;
   } else {
-    console.log("use cached data");
+    cacheLog("use cached data");
     return data;
   }
 }
@@ -116,16 +126,16 @@ export function useCache<T>(
 ): {
   data?: T;
   error?: string;
-  isLoading: boolean;
+  isLoading: boolean | undefined;
   performRefetch: () => void;
 } {
-  const secondsToRefetch = options.secondsToRefetch === undefined ? 5 * 60 : options.secondsToRefetch;
+  const secondsToRefetchUser = options.secondsToRefetch === undefined ? 5 * 60 : options.secondsToRefetch;
   const secondsToInvalid = options.secondsToInvalid === undefined ? daysInSeconds(3) : options.secondsToInvalid;
   const [data, setData] = useState<T>();
   const [error, setError] = useState<string>();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>();
   const [timestamp, setTimestamp] = useState<Date>(new Date());
-  let shouldForceRefetch = false;
+  const shouldForceRefetch = useRef(false);
   const depsAll = [timestamp];
   if (options.deps) {
     for (const d of options.deps) {
@@ -141,7 +151,7 @@ export function useCache<T>(
   };
 
   const performRefetch = () => {
-    shouldForceRefetch = true;
+    shouldForceRefetch.current = true;
     setTimestamp(new Date());
   };
 
@@ -161,21 +171,25 @@ export function useCache<T>(
       setError(undefined);
 
       try {
-        console.log("check data from cache");
+        cacheLog("check data from cache");
+        const secondsToRefetch = shouldForceRefetch.current === true ? 0 : secondsToRefetchUser;
+        if (shouldForceRefetch.current) {
+          cacheLog("force refetch");
+        }
         const cacheData = await getLargeCacheObjectData(key);
         if (cacheData && cacheData.ageInSeconds < secondsToInvalid) {
-          console.log("cache data found");
+          cacheLog("cache data found");
           if (!didUnmount) {
-            console.log("set cache data");
+            cacheLog("set cache data");
             setData(await search(cacheData.data));
-            console.log(`${cacheData.ageInSeconds}  vs  ${secondsToRefetch}`);
+            cacheLog(`${cacheData.ageInSeconds}  vs  ${secondsToRefetch}`);
             if (cacheData.ageInSeconds > secondsToRefetch) {
-              console.log("cache is older, start refetch");
+              cacheLog("cache is older, start refetch");
               // older than x minutes, refetch data and set it again
               refetch = true;
               getData()
                 .then(async (value) => {
-                  console.log("set refetched data");
+                  cacheLog("set refetched data");
                   setLargeCacheObject(key, value);
                   value = await search(value);
                   refetch = false;
@@ -198,7 +212,7 @@ export function useCache<T>(
             }
           }
         } else {
-          console.log("no cache data, start fetch");
+          cacheLog("no cache data, start fetch");
           const data = await getData();
           setLargeCacheObject(key, data);
           if (!didUnmount) {
@@ -211,7 +225,7 @@ export function useCache<T>(
         }
       } finally {
         if (shouldForceRefetch) {
-          shouldForceRefetch = false;
+          shouldForceRefetch.current = false;
         }
         if (!didUnmount && !refetch) {
           setIsLoading(false);

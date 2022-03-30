@@ -1,21 +1,15 @@
-import {
-  ActionPanel,
-  ActionPanelSection,
-  Color,
-  ImageLike,
-  List,
-  PushAction,
-  showToast,
-  ToastStyle,
-} from "@raycast/api";
+import { Action, ActionPanel, Color, Image, List, showToast, Toast } from "@raycast/api";
+import { useState } from "react";
 import urljoin from "url-join";
 import { useCache } from "../../cache";
 import { gitlab } from "../../common";
 import { Project, User } from "../../gitlabapi";
 import { GitLabIcons } from "../../icons";
+import { ensureCleanAccessories } from "../../utils";
 import { GitLabOpenInBrowserAction } from "../actions";
 import { Event } from "../event";
 import { getCIJobStatusIcon, PipelineJobsListByCommit } from "../jobs";
+import { MyProjectsDropdown } from "../project";
 import { CommitListItem } from "./item";
 import { useCommitStatus } from "./utils";
 
@@ -50,7 +44,7 @@ function EventCommitListItem(props: { event: Event }): JSX.Element {
   const action = (): JSX.Element | undefined | null => {
     if (project && commit) {
       return (
-        <PushAction
+        <Action.Push
           title="Open Pipeline"
           icon={{ source: GitLabIcons.ci, tintColor: Color.PrimaryText }}
           target={<PipelineJobsListByCommit project={project} sha={commit} />}
@@ -60,21 +54,23 @@ function EventCommitListItem(props: { event: Event }): JSX.Element {
     return null;
   };
 
-  const statusIcon: ImageLike | undefined = status?.status ? getCIJobStatusIcon(status.status) : undefined;
-  const icon: ImageLike | undefined = statusIcon ? statusIcon : { source: GitLabIcons.commit, tintColor: Color.Green };
+  const statusIcon: Image.ImageLike | undefined = status?.status ? getCIJobStatusIcon(status.status) : undefined;
+  const icon: Image.ImageLike | undefined = statusIcon
+    ? statusIcon
+    : { source: GitLabIcons.commit, tintColor: Color.Green };
 
   return (
     <List.Item
       title={title}
       subtitle={ref || commit}
-      accessoryTitle={project?.name_with_namespace}
+      accessories={ensureCleanAccessories([{ text: project?.name_with_namespace }])}
       icon={icon}
       actions={
         <ActionPanel>
-          <ActionPanelSection>
+          <ActionPanel.Section>
             {action()}
             {webAction()}
-          </ActionPanelSection>
+          </ActionPanel.Section>
         </ActionPanel>
       }
     />
@@ -82,6 +78,7 @@ function EventCommitListItem(props: { event: Event }): JSX.Element {
 }
 
 export function RecentCommitsList(): JSX.Element {
+  const [project, setProject] = useState<Project>();
   const { data, error, isLoading } = useCache<Event[]>(
     "events_pushed",
     async (): Promise<Event[]> => {
@@ -98,11 +95,16 @@ export function RecentCommitsList(): JSX.Element {
     }
   );
   if (error) {
-    showToast(ToastStyle.Failure, "Could not fetch events", error);
+    showToast(Toast.Style.Failure, "Could not fetch events", error);
   }
+  if (isLoading === undefined) {
+    return <List isLoading={true} searchBarPlaceholder="" />;
+  }
+  const commits = project ? data?.filter((e) => e.project_id === project.id) : data;
+
   return (
-    <List isLoading={isLoading}>
-      {data?.map((e) => (
+    <List isLoading={isLoading} searchBarAccessory={<MyProjectsDropdown onChange={setProject} />}>
+      {commits?.map((e) => (
         <EventCommitListItem event={e} key={`${e.target_id}${e.project_id}`} />
       ))}
     </List>
@@ -159,7 +161,7 @@ export function ProjectCommitList(props: { projectID: number; refName?: string }
     }
   );
   if (error) {
-    showToast(ToastStyle.Failure, "Could not fetch commits from project", error);
+    showToast(Toast.Style.Failure, "Could not fetch commits from project", error);
   }
   return (
     <List isLoading={isLoading}>

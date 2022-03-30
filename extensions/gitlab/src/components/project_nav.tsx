@@ -1,4 +1,4 @@
-import { ActionPanel, Color, ImageLike, KeyboardShortcut, List, PushAction } from "@raycast/api";
+import { Action, ActionPanel, Color, Image, Keyboard, List } from "@raycast/api";
 import { Project } from "../gitlabapi";
 import { gitlabgql } from "../common";
 import { ReactNode } from "react";
@@ -10,14 +10,21 @@ import { IssueList, IssueScope } from "./issues";
 import { GitLabIcons } from "../icons";
 import { GitLabOpenInBrowserAction } from "./actions";
 import { ProjectLabelList } from "./project_label";
-import { ProjectNavigationActions } from "./project_actions";
+import {
+  OpenProjectBranchesPushAction,
+  OpenProjectIssuesPushAction,
+  OpenProjectMergeRequestsPushAction,
+  OpenProjectMilestonesPushAction,
+  OpenProjectPipelinesPushAction,
+  ShowProjectLabels,
+} from "./project_actions";
 import { ProjectCommitList } from "./commits/list";
 
 export function ProjectNavMenuItem(props: {
   title: string;
-  shortcut?: KeyboardShortcut | undefined;
+  shortcut?: Keyboard.Shortcut | undefined;
   target: ReactNode;
-  icon?: ImageLike;
+  icon?: Image.ImageLike;
   project: Project;
 }): JSX.Element {
   return (
@@ -26,9 +33,14 @@ export function ProjectNavMenuItem(props: {
       icon={props.icon}
       actions={
         <ActionPanel>
-          <PushAction title={`Open ${props.title}`} shortcut={props.shortcut} target={props.target} />
+          <Action.Push title={`Open ${props.title}`} shortcut={props.shortcut} target={props.target} />
           <ActionPanel.Section>
-            <ProjectNavigationActions project={props.project} />
+            <OpenProjectIssuesPushAction project={props.project} />
+            <OpenProjectMergeRequestsPushAction project={props.project} />
+            <OpenProjectBranchesPushAction project={props.project} />
+            <OpenProjectPipelinesPushAction project={props.project} />
+            <OpenProjectMilestonesPushAction project={props.project} />
+            <ShowProjectLabels project={props.project} shortcut={{ modifiers: ["cmd"], key: "l" }} />
           </ActionPanel.Section>
         </ActionPanel>
       }
@@ -38,9 +50,9 @@ export function ProjectNavMenuItem(props: {
 
 export function ProjectNavMenuBrowserItem(props: {
   title: string;
-  shortcut?: KeyboardShortcut | undefined;
+  shortcut?: Keyboard.Shortcut | undefined;
   url: string;
-  icon?: ImageLike;
+  icon?: Image.ImageLike;
 }): JSX.Element {
   return (
     <List.Item

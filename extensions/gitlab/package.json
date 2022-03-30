@@ -174,9 +174,9 @@
     {
       "name": "primaryaction",
       "type": "dropdown",
-      "title": "Primary Action",
-      "required": false,
-      "default": "browser",
+      "title": "Preferred Primary Action",
+      "required": true,
+      "default": "detail",
       "data": [
         {
           "title": "Open in Browser",
@@ -204,7 +204,7 @@
   ],
   "dependencies": {
     "@apollo/client": "^3.4.8",
-    "@raycast/api": "^1.26.0",
+    "@raycast/api": "^1.31.0",
     "apollo-link-context": "^1.0.20",
     "fuse.js": "^6.4.6",
     "graphql": "^15.5.1",

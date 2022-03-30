@@ -9,6 +9,14 @@ const streamPipeline = util.promisify(pipeline);
 
 /* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
+const activateAPILogging = false;
+
+export function logAPI(message?: any, ...optionalParams: any[]) {
+  if (activateAPILogging) {
+    console.log(message, ...optionalParams);
+  }
+}
+
 function userFromJson(data: any): User | undefined {
   if (!data) {
     // e.g. owners can be null, it seems that when there are multiple owners, then this field is null
@@ -49,7 +57,7 @@ export function jsonDataToMergeRequest(mr: any): MergeRequest {
     id: mr.id,
     iid: mr.iid,
     state: mr.state,
-    updated_at: new Date(mr.updated_at),
+    updated_at: mr.updated_at,
     author: userFromJson(mr.author),
     project_id: mr.project_id,
     description: mr.description,
@@ -59,6 +67,8 @@ export function jsonDataToMergeRequest(mr: any): MergeRequest {
     target_branch: mr.target_branch,
     merge_commit_sha: mr.merge_commit_sha,
     sha: mr.sha,
+    milestone: mr.milestone ? (mr.milestone as Milestone) : undefined,
+    draft: mr.draft,
   };
 }
 
@@ -80,7 +90,7 @@ export function jsonDataToIssue(issue: any): Issue {
     iid: issue.iid,
     reference_full: issue.references?.full,
     state: issue.state,
-    updated_at: new Date(issue.updated_at),
+    updated_at: issue.updated_at,
     author: userFromJson(issue.author),
     project_id: issue.project_id,
     milestone: dataToMilestone(issue.milestone),
@@ -162,7 +172,7 @@ export class Issue {
   public reference_full = "";
   public state = "";
   public author: User | undefined;
-  public updated_at = new Date(2000, 1, 1);
+  public updated_at = "";
   public project_id = 0;
   public milestone?: Milestone = undefined;
   public labels: Label[] = [];
@@ -176,7 +186,7 @@ export class MergeRequest {
   public iid = 0;
   public state = "";
   public author: User | undefined;
-  public updated_at = new Date(2000, 1, 1);
+  public updated_at = "";
   public project_id = 0;
   public reference_full = "";
   public labels: Label[] = [];
@@ -184,6 +194,8 @@ export class MergeRequest {
   public target_branch = "";
   public merge_commit_sha = "";
   public sha = "";
+  public milestone?: Milestone;
+  public draft = false;
 }
 
 export interface TodoGroup {
@@ -250,7 +262,7 @@ export function isValidStatus(status: Status): boolean {
 
 async function toJsonOrError(response: Response): Promise<any> {
   const s = response.status;
-  console.log(`status code: ${s}`);
+  logAPI(`status code: ${s}`);
   if (s >= 200 && s < 300) {
     const json = await response.json();
     return json;
@@ -262,17 +274,17 @@ async function toJsonOrError(response: Response): Promise<any> {
     if (json.error && json.error == "insufficient_scope") {
       msg = "Insufficient API token scope";
     }
-    console.log(msg);
+    logAPI(msg);
     throw Error(msg);
   } else if (s == 404) {
     throw Error("Not found");
   } else if (s >= 400 && s < 500) {
     const json = await response.json();
-    console.log(json);
+    logAPI(json);
     const msg = json.message;
     throw Error(msg);
   } else {
-    console.log("unknown error");
+    logAPI("unknown error");
     throw Error(`http status ${s}`);
   }
 }
@@ -291,7 +303,7 @@ export class GitLab {
       const pagedParams = { ...params, ...{ per_page: `${per_page}`, page: `${page}` } };
       const ps = paramString(pagedParams);
       const fullUrl = this.url + "/api/v4/" + url + ps;
-      console.log(`send GET request: ${fullUrl}`);
+      logAPI(`send GET request: ${fullUrl}`);
       const response = await fetch(fullUrl, {
         method: "GET",
         headers: {
@@ -308,7 +320,7 @@ export class GitLab {
       if (all) {
         const next_page = response.headers.get("x-next-page");
         if (next_page && next_page.length > 0) {
-          console.log(next_page);
+          logAPI(next_page);
           page++;
           const jsonpage = await fetchPage(page);
           json.concat(jsonpage);
@@ -321,7 +333,7 @@ export class GitLab {
   }
 
   public async downloadFile(url: string, params: { localFilepath: string }): Promise<string> {
-    console.log(`download ${url}`);
+    logAPI(`download ${url}`);
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -331,15 +343,15 @@ export class GitLab {
     if (!response.ok) {
       throw new Error(`unexpected response ${response.statusText}`);
     }
-    console.log(`write ${url} to ${params.localFilepath}`);
+    logAPI(`write ${url} to ${params.localFilepath}`);
     await streamPipeline(response.body, fs.createWriteStream(params.localFilepath));
     return params.localFilepath;
   }
 
   public async post(url: string, params: { [key: string]: any } = {}): Promise<any> {
     const fullUrl = this.url + "/api/v4/" + url;
-    console.log(`send POST request: ${fullUrl}`);
-    console.log(params);
+    logAPI(`send POST request: ${fullUrl}`);
+    logAPI(params);
     try {
       const response = await fetch(fullUrl, {
         method: "POST",
@@ -350,7 +362,7 @@ export class GitLab {
         body: JSON.stringify(params),
       });
       const s = response.status;
-      console.log(`status code: ${s}`);
+      logAPI(`status code: ${s}`);
       if (s >= 200 && s < 300) {
         const json = await response.json();
         return json;
@@ -365,13 +377,13 @@ export class GitLab {
         if (json.error && json.error == "insufficient_scope") {
           msg = "Insufficient API token scope";
         }
-        console.log(msg);
+        logAPI(msg);
         throw Error(msg);
       } else if (s == 404) {
         throw Error("Not found");
       } else if (s >= 400 && s < 500) {
         const json = await response.json();
-        console.log(json);
+        logAPI(json);
         let msg = `http status ${s}`;
         if (json.message) {
           // TODO better form error handling
@@ -379,19 +391,19 @@ export class GitLab {
         }
         throw Error(msg);
       } else {
-        console.log("unknown error");
+        logAPI("unknown error");
         throw Error(`http status ${s}`);
       }
     } catch (e: any) {
-      console.log(`catch error: ${e}`);
+      logAPI(`catch error: ${e}`);
       throw Error(e.message); // rethrow error, otherwise raycast could not catch the error
     }
   }
 
   public async put(url: string, params: { [key: string]: any } = {}): Promise<void> {
     const fullUrl = this.url + "/api/v4/" + url;
-    console.log(`send PUT request: ${fullUrl}`);
-    console.log(params);
+    logAPI(`send PUT request: ${fullUrl}`);
+    logAPI(params);
     try {
       const response = await fetch(fullUrl, {
         method: "PUT",
@@ -403,17 +415,17 @@ export class GitLab {
       });
       await toJsonOrError(response);
     } catch (e: any) {
-      console.log(`catch error: ${e}`);
+      logAPI(`catch error: ${e}`);
       throw Error(e.message); // rethrow error, otherwise raycast could not catch the error
     }
   }
 
-  async getIssues(params: Record<string, any>, project?: Project): Promise<Issue[]> {
+  async getIssues(params: Record<string, any>, project?: Project, all?: boolean): Promise<Issue[]> {
     const projectPrefix = project ? `projects/${project.id}/` : "";
     if (!params.with_labels_details) {
       params.with_labels_details = "true";
     }
-    const issueItems: Issue[] = await this.fetch(`${projectPrefix}issues`, params).then((issues) => {
+    const issueItems: Issue[] = await this.fetch(`${projectPrefix}issues`, params, all).then((issues) => {
       return issues.map((issue: any) => jsonDataToIssue(issue));
     });
     return issueItems;
@@ -672,7 +684,7 @@ export class GitLab {
           epics.push(e);
         }
       } catch (e: any) {
-        console.log("skip during error");
+        logAPI("skip during error");
       }
     }
     return epics;

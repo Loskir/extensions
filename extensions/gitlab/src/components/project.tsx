@@ -1,23 +1,26 @@
-import { ActionPanel, CopyToClipboardAction, List, showToast, ToastStyle, Color, Detail } from "@raycast/api";
+import { ActionPanel, List, showToast, Toast, Detail } from "@raycast/api";
 import { useState } from "react";
-import { gitlab, gitlabgql } from "../common";
+import { gitlab } from "../common";
 import { Project, searchData } from "../gitlabapi";
 import { daysInSeconds, hashRecord, projectIconUrl } from "../utils";
 import {
   CloneProjectInGitPod,
   CloneProjectInVSCodeAction,
+  CopyProjectIDToClipboardAction,
+  OpenProjectBranchesPushAction,
+  OpenProjectIssuesPushAction,
+  OpenProjectLabelsInBrowserAction,
+  OpenProjectMergeRequestsPushAction,
+  OpenProjectMilestonesPushAction,
+  OpenProjectPipelinesPushAction,
+  OpenProjectSecurityComplianceInBrowserAction,
+  OpenProjectSettingsInBrowserAction,
   ProjectDefaultActions,
-  ProjectNavigationActions,
+  ShowProjectLabels,
 } from "./project_actions";
 import { GitLabIcons, useImage } from "../icons";
 import { useCache } from "../cache";
 import { ClearLocalCacheAction } from "./cache_actions";
-import { GitLabOpenInBrowserAction } from "./actions";
-import React from "react";
-
-function webUrl(project: Project, partial: string) {
-  return gitlabgql.urlJoin(`${project.fullPath}/${partial}`);
-}
 
 export function ProjectListItem(props: { project: Project }): JSX.Element {
   const project = props.project;
@@ -33,27 +36,20 @@ export function ProjectListItem(props: { project: Project }): JSX.Element {
         <ActionPanel>
           <ActionPanel.Section title={project.name_with_namespace}>
             <ProjectDefaultActions project={project} />
-            <CopyToClipboardAction title="Copy Project ID" content={project.id} />
           </ActionPanel.Section>
           <ActionPanel.Section>
-            <ProjectNavigationActions project={project} />
+            <CopyProjectIDToClipboardAction project={project} />
+            <OpenProjectIssuesPushAction project={project} />
+            <OpenProjectMergeRequestsPushAction project={project} />
+            <OpenProjectBranchesPushAction project={project} />
+            <OpenProjectPipelinesPushAction project={project} />
+            <OpenProjectMilestonesPushAction project={project} />
+            <ShowProjectLabels project={props.project} shortcut={{ modifiers: ["cmd"], key: "l" }} />
           </ActionPanel.Section>
           <ActionPanel.Section title="Open in Browser">
-            <GitLabOpenInBrowserAction
-              title="Labels"
-              icon={{ source: GitLabIcons.labels, tintColor: Color.PrimaryText }}
-              url={webUrl(project, "-/labels")}
-            />
-            <GitLabOpenInBrowserAction
-              title="Security & Compliance"
-              icon={{ source: GitLabIcons.security, tintColor: Color.PrimaryText }}
-              url={webUrl(project, "-/security/discover")}
-            />
-            <GitLabOpenInBrowserAction
-              title="Settings"
-              icon={{ source: GitLabIcons.settings, tintColor: Color.PrimaryText }}
-              url={webUrl(project, "edit")}
-            />
+            <OpenProjectLabelsInBrowserAction project={project} />
+            <OpenProjectSecurityComplianceInBrowserAction project={project} />
+            <OpenProjectSettingsInBrowserAction project={project} />
           </ActionPanel.Section>
           <ActionPanel.Section title="IDE">
             <CloneProjectInVSCodeAction shortcut={{ modifiers: ["cmd", "shift"], key: "c" }} project={project} />
@@ -102,7 +98,7 @@ export function ProjectList({ membership = true, starred = false }: ProjectListP
   );
 
   if (error) {
-    showToast(ToastStyle.Failure, "Cannot search Project", error);
+    showToast(Toast.Style.Failure, "Cannot search Project", error);
   }
 
   if (!data) {
@@ -150,4 +146,35 @@ export function useMyProjects(): { projects: Project[] | undefined; error?: stri
     }
   );
   return { projects, error, isLoading };
+}
+
+function MyProjectsDropdownItem(props: { project: Project }): JSX.Element {
+  const pro = props.project;
+  const { localFilepath } = useImage(projectIconUrl(pro), GitLabIcons.project);
+  return <List.Dropdown.Item title={pro.name_with_namespace} icon={localFilepath} value={`${pro.id}`} />;
+}
+
+export function MyProjectsDropdown(props: { onChange: (pro: Project | undefined) => void }): JSX.Element | null {
+  const { projects: myprojects } = useMyProjects();
+  if (myprojects) {
+    return (
+      <List.Dropdown
+        tooltip="Select Project"
+        onChange={(newValue) => {
+          const pro = myprojects.find((p) => `${p.id}` === newValue);
+          props.onChange(pro);
+        }}
+      >
+        <List.Dropdown.Section>
+          <List.Dropdown.Item title="All Projects" value="-" />
+        </List.Dropdown.Section>
+        <List.Dropdown.Section>
+          {myprojects.map((pro) => (
+            <MyProjectsDropdownItem key={`${pro.id}`} project={pro} />
+          ))}
+        </List.Dropdown.Section>
+      </List.Dropdown>
+    );
+  }
+  return null;
 }

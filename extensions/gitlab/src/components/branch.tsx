@@ -1,4 +1,4 @@
-import { ActionPanel, List, Image, Color, showToast, ToastStyle } from "@raycast/api";
+import { ActionPanel, List, Image, Color, showToast, Toast } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { Project } from "../gitlabapi";
 import { gitlab } from "../common";
@@ -7,6 +7,7 @@ import { CreateMRAction, ShowBranchCommitsAction } from "./branch_actions";
 import { GitLabOpenInBrowserAction } from "./actions";
 import { useCommitStatus } from "./commits/utils";
 import { getCIJobStatusIcon } from "./jobs";
+import { ensureCleanAccessories } from "../utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
@@ -31,13 +32,14 @@ export function BranchListItem(props: { branch: any; project: Project }) {
   }
   const { commitStatus } = useCommitStatus(project.id, branch?.commit?.id);
   const statusIcon = commitStatus ? getCIJobStatusIcon(commitStatus.status) : undefined;
+
   return (
     <List.Item
       id={branch.id}
       title={branch.name}
       subtitle={states.join(" ")}
       icon={icon}
-      accessoryIcon={statusIcon}
+      accessories={ensureCleanAccessories([{ icon: statusIcon }])}
       actions={
         <ActionPanel>
           <ShowBranchCommitsAction projectID={project.id} branch={branch} />
@@ -53,7 +55,7 @@ export function BranchList(props: { project: Project }) {
   const [query, setQuery] = useState<string>("");
   const { branches, error, isLoading } = useSearch(query, props.project);
   if (error) {
-    showToast(ToastStyle.Failure, "Cannot search branches", error);
+    showToast(Toast.Style.Failure, "Cannot search branches", error);
   }
 
   return (

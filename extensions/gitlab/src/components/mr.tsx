@@ -1,21 +1,12 @@
-import {
-  ActionPanel,
-  List,
-  showToast,
-  ToastStyle,
-  Color,
-  Detail,
-  PushAction,
-  ImageMask,
-  ImageLike,
-  CopyToClipboardAction,
-} from "@raycast/api";
+import { ActionPanel, List, showToast, Color, Detail, Action, Image, Toast } from "@raycast/api";
 import { Group, MergeRequest, Project } from "../gitlabapi";
 import { GitLabIcons } from "../icons";
 import { gitlab, gitlabgql } from "../common";
 import { useState, useEffect } from "react";
 import {
   capitalizeFirstLetter,
+  daysInSeconds,
+  ensureCleanAccessories,
   getErrorMessage,
   now,
   optimizeMarkdownText,
@@ -26,8 +17,8 @@ import {
 import { gql } from "@apollo/client";
 import { MRItemActions } from "./mr_actions";
 import { GitLabOpenInBrowserAction } from "./actions";
-import { getCIJobStatusIcon } from "./jobs";
-import { useCommitStatus } from "./commits/utils";
+import { getCIJobStatusEmoji } from "./jobs";
+import { useCache } from "../cache";
 
 /* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types */
 
@@ -56,28 +47,10 @@ const GET_MR_DETAIL = gql`
   }
 `;
 
-function NoMRListItem(props: {
-  isLoading: boolean | undefined;
-  mrs: MergeRequest[] | undefined;
-  selectProjectAction: JSX.Element | undefined;
-}): JSX.Element | null {
-  const mrs = props.mrs;
-  const selectProjectAction = props.selectProjectAction;
-  if (props.isLoading) {
-    return null;
-  }
-  if (mrs && mrs.length <= 0) {
-    if (selectProjectAction !== undefined) {
-      return <List.Item title="No Merge Requests found" actions={<ActionPanel>{selectProjectAction}</ActionPanel>} />;
-    }
-  }
-  return null;
-}
-
 export function MRDetailFetch(props: { project: Project; mrId: number }): JSX.Element {
   const { mr, isLoading, error } = useMR(props.project.id, props.mrId);
   if (error) {
-    showToast(ToastStyle.Failure, "Could not fetch Merge Request Details", error);
+    showToast(Toast.Style.Failure, "Could not fetch Merge Request Details", error);
   }
   if (isLoading || !mr) {
     return <Detail isLoading={isLoading} />;
@@ -91,11 +64,25 @@ interface MRDetailData {
   projectWebUrl: string;
 }
 
+function stateColor(state: string): Color.ColorLike {
+  switch (state) {
+    case "closed": {
+      return Color.Red;
+    }
+    case "merged": {
+      return Color.Purple;
+    }
+    default: {
+      return Color.Green;
+    }
+  }
+}
+
 export function MRDetail(props: { mr: MergeRequest }): JSX.Element {
   const mr = props.mr;
   const { mrdetail, error, isLoading } = useDetail(props.mr.id);
   if (error) {
-    showToast(ToastStyle.Failure, "Could not get merge request details", error);
+    showToast(Toast.Style.Failure, "Could not get merge request details", error);
   }
 
   const desc = (mrdetail?.description ? mrdetail.description : props.mr.description) || "";
@@ -103,17 +90,12 @@ export function MRDetail(props: { mr: MergeRequest }): JSX.Element {
   const lines: string[] = [];
   if (mr) {
     lines.push(`# ${mr.title}`);
-    lines.push(`Merge \`${mr.source_branch}\` into \`${mr.target_branch}\``);
-    if (mr.author) {
-      lines.push(`Author: ${mr.author.name} [@${mr.author.username}](${mr.author.web_url})`);
-    }
-    lines.push(`Status: \`${capitalizeFirstLetter(mr.state)}\``);
-    const labels = mr.labels.map((i) => `\`${i.name || i}\``).join(" ");
-    lines.push(`Labels: ${labels || "<No Label>"}`);
-    lines.push("## Description\n" + optimizeMarkdownText(desc, mrdetail?.projectWebUrl));
+    lines.push(optimizeMarkdownText(desc, mrdetail?.projectWebUrl));
   }
 
   const md = lines.join("  \n");
+  const author = mr.author ? `${mr.author.name}` : "<no author>";
+  const milestone = mr.milestone ? mr.milestone.title : "<no milestone>";
 
   return (
     <Detail
@@ -124,8 +106,28 @@ export function MRDetail(props: { mr: MergeRequest }): JSX.Element {
         <ActionPanel>
           <GitLabOpenInBrowserAction url={props.mr.web_url} />
           <MRItemActions mr={props.mr} />
-          <CopyToClipboardAction title="Copy Merge Request Description" content={props.mr.description} />
+          <Action.CopyToClipboard title="Copy Merge Request Description" content={props.mr.description} />
         </ActionPanel>
+      }
+      metadata={
+        <Detail.Metadata>
+          <Detail.Metadata.TagList title="Status">
+            <Detail.Metadata.TagList.Item
+              text={capitalizeFirstLetter(mr.state)}
+              color={stateColor(mr.state)}
+              //icon={stateIcon(issue.state)}
+            />
+          </Detail.Metadata.TagList>
+          <Detail.Metadata.Label title="From" text={mr.source_branch} />
+          <Detail.Metadata.Label title="Into" text={mr.target_branch} />
+          <Detail.Metadata.Label title="Author" text={author} />
+          <Detail.Metadata.Label title="Milestone" text={milestone} />
+          <Detail.Metadata.TagList title="Labels">
+            {mr.labels.map((m) => (
+              <Detail.Metadata.TagList.Item text={m.name} color={m.color} />
+            ))}
+          </Detail.Metadata.TagList>
+        </Detail.Metadata>
       }
     />
   );
@@ -192,7 +194,10 @@ interface MRListProps {
   state?: MRState;
   project?: Project;
   group?: Group;
-  selectProjectAction?: JSX.Element;
+  searchBarAccessory?:
+    | React.ReactElement<List.Dropdown.Props, string | React.JSXElementConstructor<any>>
+    | null
+    | undefined;
 }
 
 function navTitle(project?: Project, group?: Group): string | undefined {
@@ -210,13 +215,13 @@ export function MRList({
   state = MRState.all,
   project = undefined,
   group = undefined,
-  selectProjectAction = undefined,
+  searchBarAccessory = undefined,
 }: MRListProps): JSX.Element {
   const [searchText, setSearchText] = useState<string>();
   const { mrs, error, isLoading, refresh } = useSearch(searchText, scope, state, project, group);
 
   if (error) {
-    showToast(ToastStyle.Failure, "Cannot search Merge Requests", error);
+    showToast(Toast.Style.Failure, "Cannot search Merge Requests", error);
   }
 
   if (!mrs) {
@@ -231,21 +236,13 @@ export function MRList({
       onSearchTextChange={setSearchText}
       isLoading={isLoading}
       throttle={true}
+      searchBarAccessory={searchBarAccessory}
       navigationTitle={navTitle(project, group)}
     >
       <List.Section title={title} subtitle={mrs?.length.toString() || "0"}>
         {mrs?.map((mr) => (
-          <MRListItem
-            key={mr.id}
-            mr={mr}
-            refreshData={refresh}
-            action={selectProjectAction}
-            showCIStatus={scope === MRScope.assigned_to_me}
-          />
+          <MRListItem key={mr.id} mr={mr} refreshData={refresh} />
         ))}
-      </List.Section>
-      <List.Section>
-        <NoMRListItem isLoading={isLoading} mrs={mrs} selectProjectAction={selectProjectAction} />
       </List.Section>
     </List>
   );
@@ -259,35 +256,43 @@ export function MRListItem(props: {
 }): JSX.Element {
   const mr = props.mr;
 
-  const getIcon = (): ImageLike => {
+  const getIcon = (): Image.ImageLike => {
     if (mr.state === "merged") {
-      return { source: GitLabIcons.merged, tintColor: Color.Purple, mask: ImageMask.Circle };
+      return { source: GitLabIcons.merged, tintColor: Color.Purple, mask: Image.Mask.Circle };
     } else if (mr.state === "closed") {
-      return { source: GitLabIcons.mropen, tintColor: Color.Red, mask: ImageMask.Circle };
+      return { source: GitLabIcons.mropen, tintColor: Color.Red, mask: Image.Mask.Circle };
     } else {
-      return { source: GitLabIcons.mropen, tintColor: Color.Green, mask: ImageMask.Circle };
+      return { source: GitLabIcons.mropen, tintColor: Color.Green, mask: Image.Mask.Circle };
     }
   };
   const icon = getIcon();
-  let accessoryIcon: ImageLike | undefined = { source: mr.author?.avatar_url || "", mask: ImageMask.Circle };
-  if (props.showCIStatus) {
-    const { commitStatus: status } = useCommitStatus(mr.project_id, mr.sha);
-    if (status) {
-      accessoryIcon = getCIJobStatusIcon(status.status);
+  const accessoryIcon: Image.ImageLike | undefined = { source: mr.author?.avatar_url || "", mask: Image.Mask.Circle };
+  let cistatusEmoji: string | undefined;
+  if (props.showCIStatus === undefined || props.showCIStatus === true) {
+    const { mrpipelines } = useMRPipelines(mr);
+    if (mrpipelines && mrpipelines.length > 0) {
+      cistatusEmoji = getCIJobStatusEmoji(mrpipelines[0].status);
     }
+  }
+  const subtitle: string[] = [`!${mr.iid}`];
+  if (cistatusEmoji) {
+    subtitle.push(cistatusEmoji);
   }
   return (
     <List.Item
       id={mr.id.toString()}
       title={mr.title}
-      subtitle={"#" + mr.iid}
+      subtitle={subtitle.join("    ")}
       icon={icon}
-      accessoryIcon={accessoryIcon}
-      accessoryTitle={toDateString(mr.updated_at)}
+      accessories={ensureCleanAccessories([
+        { text: mr.milestone?.title },
+        { text: toDateString(mr.updated_at) },
+        { icon: accessoryIcon },
+      ])}
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <PushAction
+            <Action.Push
               title="Show Details"
               target={<MRDetail mr={mr} />}
               icon={{ source: GitLabIcons.show_details, tintColor: Color.PrimaryText }}
@@ -492,4 +497,43 @@ export function useMR(
   }, [projectID, mrID]);
 
   return { mr, error, isLoading };
+}
+
+interface MRPipeline {
+  id: number;
+  sha: string;
+  ref: string;
+  status: string;
+}
+
+export function useMRPipelines(mr: MergeRequest): {
+  mrpipelines: MRPipeline[] | undefined;
+  isLoading: boolean | undefined;
+  error: string | undefined;
+  performRefetch: () => void;
+} {
+  const {
+    data: mrpipelines,
+    isLoading,
+    error,
+    performRefetch,
+  } = useCache<MRPipeline[] | undefined>(
+    `mrpipelines_${mr.project_id}_${mr.iid}`,
+    async (): Promise<MRPipeline[] | undefined> => {
+      const result: MRPipeline[] | undefined = await gitlab
+        .fetch(`projects/${mr.project_id}/merge_requests/${mr.iid}/pipelines`)
+        .then((data) => {
+          return data?.map((m: any) => {
+            return m as MRPipeline;
+          });
+        });
+      return result;
+    },
+    {
+      deps: [mr],
+      secondsToRefetch: 10,
+      secondsToInvalid: daysInSeconds(7),
+    }
+  );
+  return { mrpipelines, isLoading, error, performRefetch };
 }

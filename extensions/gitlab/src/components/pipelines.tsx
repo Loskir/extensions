@@ -1,8 +1,8 @@
-import { ActionPanel, List, Icon, Image, Color, showToast, ToastStyle, PushAction } from "@raycast/api";
+import { Action, ActionPanel, List, Icon, Image, Color, showToast, Toast } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { getCIRefreshInterval, gitlabgql } from "../common";
 import { gql } from "@apollo/client";
-import { getErrorMessage, getIdFromGqlId, now } from "../utils";
+import { ensureCleanAccessories, getErrorMessage, getIdFromGqlId, now } from "../utils";
 import { JobList } from "./jobs";
 import { RefreshPipelinesAction } from "./pipeline_actions";
 import useInterval from "use-interval";
@@ -74,11 +74,11 @@ export function PipelineListItem(props: {
       title={pipeline.id.toString()}
       icon={icon}
       subtitle={pipeline.ref || ""}
-      accessoryTitle={getStatusText(pipeline.status.toLowerCase())}
+      accessories={ensureCleanAccessories([{ text: getStatusText(pipeline.status.toLowerCase()) }])}
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <PushAction
+            <Action.Push
               title="Show Jobs"
               target={<JobList projectFullPath={props.projectFullPath} pipelineIID={pipeline.iid} />}
               icon={{ source: Icon.Terminal, tintColor: Color.PrimaryText }}
@@ -100,7 +100,7 @@ export function PipelineList(props: { projectFullPath: string }): JSX.Element {
     refresh();
   }, getCIRefreshInterval());
   if (error) {
-    showToast(ToastStyle.Failure, "Cannot search Pipelines", error);
+    showToast(Toast.Style.Failure, "Cannot search Pipelines", error);
   }
   return (
     <List isLoading={isLoading} navigationTitle="Pipelines">

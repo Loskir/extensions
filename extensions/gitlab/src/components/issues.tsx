@@ -1,14 +1,4 @@
-import {
-  ActionPanel,
-  List,
-  Color,
-  showToast,
-  ToastStyle,
-  Detail,
-  PushAction,
-  ImageMask,
-  CopyToClipboardAction,
-} from "@raycast/api";
+import { Action, ActionPanel, List, Color, showToast, Toast, Detail, Image, Icon } from "@raycast/api";
 import { gql } from "@apollo/client";
 import { useEffect, useState } from "react";
 import { gitlab, gitlabgql } from "../common";
@@ -16,6 +6,7 @@ import { Group, Issue, Project } from "../gitlabapi";
 import { GitLabIcons } from "../icons";
 import {
   capitalizeFirstLetter,
+  ensureCleanAccessories,
   getErrorMessage,
   now,
   optimizeMarkdownText,
@@ -52,7 +43,7 @@ const GET_ISSUE_DETAIL = gql`
 export function IssueDetailFetch(props: { project: Project; issueId: number }): JSX.Element {
   const { issue, isLoading, error } = useIssue(props.project.id, props.issueId);
   if (error) {
-    showToast(ToastStyle.Failure, "Could not fetch Issue Details", error);
+    showToast(Toast.Style.Failure, "Could not fetch Issue Details", error);
   }
   if (isLoading || !issue) {
     return <Detail isLoading={isLoading} />;
@@ -66,11 +57,19 @@ interface IssueDetailData {
   projectWebUrl?: string;
 }
 
+function stateColor(state: string): Color.ColorLike {
+  return state === "closed" ? "red" : "green";
+}
+
+function stateIcon(state: string): Image.ImageLike {
+  return { source: GitLabIcons.branches, tintColor: stateColor(state) };
+}
+
 export function IssueDetail(props: { issue: Issue }): JSX.Element {
   const issue = props.issue;
   const { issueDetail, error, isLoading } = useDetail(props.issue.id);
   if (error) {
-    showToast(ToastStyle.Failure, "Could not get issue details", error);
+    showToast(Toast.Style.Failure, "Could not get issue details", error);
   }
 
   const desc = (issueDetail?.description ? issueDetail.description : props.issue.description) || "";
@@ -78,16 +77,10 @@ export function IssueDetail(props: { issue: Issue }): JSX.Element {
   const lines: string[] = [];
   if (issue) {
     lines.push(`# ${issue.title}`);
-    lines.push(`Milestone: ${issue.milestone?.title || "<no milestone>"}`);
-    if (issue.author) {
-      lines.push(`Author: ${issue.author.name} [@${issue.author.username}](${issue.author.web_url})`);
-    }
-    lines.push(`Status: \`${capitalizeFirstLetter(issue.state)}\``);
-    const labels = issue.labels.map((i) => `\`${i.name || i}\``).join(" ") + "  \n";
-    lines.push(`Labels: ${labels || "<No Label>"}`);
-    lines.push("## Description\n" + optimizeMarkdownText(desc, issueDetail?.projectWebUrl));
+    lines.push(optimizeMarkdownText(desc, issueDetail?.projectWebUrl));
   }
   const md = lines.join("  \n");
+  const author = issue.author ? `${issue.author.name}` : "<no author>";
 
   return (
     <Detail
@@ -98,8 +91,26 @@ export function IssueDetail(props: { issue: Issue }): JSX.Element {
         <ActionPanel>
           <GitLabOpenInBrowserAction url={props.issue.web_url} />
           <IssueItemActions issue={props.issue} />
-          <CopyToClipboardAction title="Copy Issue Description" content={issue.description} />
+          <Action.CopyToClipboard title="Copy Issue Description" content={issue.description} />
         </ActionPanel>
+      }
+      metadata={
+        <Detail.Metadata>
+          <Detail.Metadata.TagList title="Status">
+            <Detail.Metadata.TagList.Item
+              text={capitalizeFirstLetter(issue.state)}
+              color={stateColor(issue.state)}
+              //icon={stateIcon(issue.state)}
+            />
+          </Detail.Metadata.TagList>
+          <Detail.Metadata.Label title="Author" text={author} />
+          <Detail.Metadata.Label title="Milestone" text={issue.milestone?.title || "<no milestone>"} />
+          <Detail.Metadata.TagList title="Labels">
+            {issue.labels.map((i) => (
+              <Detail.Metadata.TagList.Item text={i.name} color={i.color} />
+            ))}
+          </Detail.Metadata.TagList>
+        </Detail.Metadata>
       }
     />
   );
@@ -169,19 +180,21 @@ function useDetail(issueID: number): {
 export function IssueListItem(props: { issue: Issue; refreshData: () => void }): JSX.Element {
   const issue = props.issue;
   const tintColor = issue.state === "opened" ? Color.Green : Color.Red;
-  const extraSubtitle = issue.milestone ? `${issue.milestone.title}  |  ` : "";
   return (
     <List.Item
       id={issue.id.toString()}
       title={issue.title}
       subtitle={"#" + issue.iid}
       icon={{ source: GitLabIcons.issue, tintColor: tintColor }}
-      accessoryIcon={{ source: issue.author?.avatar_url || "", mask: ImageMask.Circle }}
-      accessoryTitle={extraSubtitle + toDateString(issue.updated_at)}
+      accessories={ensureCleanAccessories([
+        { text: issue.milestone ? issue.milestone.title : undefined },
+        { text: toDateString(issue.updated_at) },
+        { icon: { source: issue.author?.avatar_url || "", mask: Image.Mask.Circle } },
+      ])}
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <PushAction
+            <Action.Push
               title="Show Details"
               target={<IssueDetail issue={issue} />}
               icon={{ source: GitLabIcons.show_details, tintColor: Color.PrimaryText }}
@@ -202,6 +215,11 @@ interface IssueListProps {
   state?: IssueState;
   project?: Project;
   group?: Group;
+  searchBarAccessory?:
+    | boolean
+    | React.ReactElement<List.Dropdown.Props, string | React.JSXElementConstructor<any>>
+    | null
+    | undefined;
 }
 
 function navTitle(project?: Project, group?: Group): string | undefined {
@@ -219,12 +237,13 @@ export function IssueList({
   state = IssueState.all,
   project = undefined,
   group = undefined,
+  searchBarAccessory = undefined,
 }: IssueListProps): JSX.Element {
   const [searchText, setSearchText] = useState<string>();
   const { issues, error, isLoading, refresh } = useSearch(searchText, scope, state, project, group);
 
   if (error) {
-    showToast(ToastStyle.Failure, "Cannot search issue", error);
+    showToast(Toast.Style.Failure, "Cannot search issue", error);
   }
 
   if (!issues) {
@@ -239,6 +258,7 @@ export function IssueList({
       onSearchTextChange={setSearchText}
       isLoading={isLoading}
       throttle={true}
+      searchBarAccessory={searchBarAccessory}
       navigationTitle={navTitle(project, group)}
     >
       <List.Section title={title} subtitle={issues?.length.toString() || ""}>
@@ -369,7 +389,7 @@ export function useSearch(
     return () => {
       didUnmount = true;
     };
-  }, [query, timestamp]);
+  }, [query, timestamp, project]);
 
   return { issues, error, isLoading, refresh };
 }
