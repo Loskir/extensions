@@ -171,6 +171,9 @@ export function JobList(props: {
   if (error) {
     showToast(Toast.Style.Failure, "Cannot search Pipelines", error);
   }
+  if (!stages || isLoading) {
+    return <List isLoading navigationTitle="Jobs" />;
+  }
   return (
     <List isLoading={isLoading} navigationTitle="Jobs">
       {Object.keys(stages).map((stagekey) => (
@@ -198,12 +201,12 @@ export function useSearch(
   pipelineID: string,
   pipelineIID?: string | undefined
 ): {
-  stages: Record<string, Job[]>;
+  stages: Record<string, Job[]> | undefined;
   error?: string;
   isLoading: boolean;
   refresh: () => void;
 } {
-  const [stages, setStages] = useState<Record<string, Job[]>>({});
+  const [stages, setStages] = useState<Record<string, Job[]> | undefined>(undefined);
   const [error, setError] = useState<string>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [timestamp, setTimestamp] = useState<Date>(now());
@@ -311,24 +314,22 @@ export function PipelineJobsListByCommit(props: { project: Project; sha: string 
     showToast(Toast.Style.Failure, "Could not fetch Commit Details", error);
   }
   if (isLoading || !commit) {
-    return <List isLoading={isLoading} searchBarPlaceholder="Loading" />;
-  } else {
-    if (commit.last_pipeline) {
-      return (
-        <JobList
-          projectFullPath={props.project.fullPath}
-          pipelineID={`${commit.last_pipeline.id}`}
-          pipelineIID={commit.last_pipeline.iid ? `${commit.last_pipeline.iid}` : undefined}
-        />
-      );
-    } else {
-      return (
-        <List>
-          <List.Item title="No piplelines attached" />
-        </List>
-      );
-    }
+    return <List isLoading />;
   }
+  if (commit.last_pipeline) {
+    return (
+      <JobList
+        projectFullPath={props.project.fullPath}
+        pipelineID={`${commit.last_pipeline.id}`}
+        pipelineIID={commit.last_pipeline.iid ? `${commit.last_pipeline.iid}` : undefined}
+      />
+    );
+  }
+  return (
+    <List>
+      <List.Item title="No pipelines attached" />
+    </List>
+  );
 }
 
 function useCommit(
