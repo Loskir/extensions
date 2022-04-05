@@ -192,7 +192,7 @@ interface RESTJob {
   status: string;
   stage: string;
   name: string;
-  duration: number;
+  duration?: number; // not sure
 }
 
 export function useSearch(
@@ -259,7 +259,12 @@ export function useSearch(
             if (!stages[job.stage]) {
               stages[job.stage] = [];
             }
-            stages[job.stage].push({ id: `${job.id}`, name: job.name, status: job.status, duration: job.duration });
+            stages[job.stage].push({
+              id: `${job.id}`,
+              name: job.name,
+              status: job.status,
+              duration: job.duration ? Math.round(job.duration) : null,
+            });
           }
           if (!didUnmount) {
             setStages(stages);
