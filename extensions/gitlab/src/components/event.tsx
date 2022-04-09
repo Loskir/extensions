@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Color, Icon, Image, List, showToast, Toast, Detail } from "@raycast/api";
+import { Action, ActionPanel, Color, Icon, Image, List, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
 import { useCache } from "../cache";
 import { gitlab } from "../common";
@@ -431,7 +431,7 @@ export function EventList(): JSX.Element {
   }
 
   if (!data) {
-    return <Detail isLoading />;
+    return <List isLoading />;
   }
   return (
     <List onSearchTextChange={setSearchText} isLoading={isLoading} throttle={true}>

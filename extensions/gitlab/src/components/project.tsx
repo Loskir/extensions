@@ -1,4 +1,4 @@
-import { ActionPanel, List, showToast, Toast, Detail } from "@raycast/api";
+import { ActionPanel, List, showToast, Toast } from "@raycast/api";
 import { useState } from "react";
 import { gitlab } from "../common";
 import { Project, searchData } from "../gitlabapi";
@@ -99,10 +99,6 @@ export function ProjectList({ membership = true, starred = false }: ProjectListP
 
   if (error) {
     showToast(Toast.Style.Failure, "Cannot search Project", error);
-  }
-
-  if (!data) {
-    return <Detail isLoading />;
   }
 
   return (
