@@ -1,4 +1,4 @@
-import { ActionPanel, Color, CopyToClipboardAction, Icon, List } from "@raycast/api";
+import { ActionPanel, Color, CopyToClipboardAction, Icon, ImageLike, List } from "@raycast/api";
 import React from "react";
 
 import useKubectx from "./hooks/useKubectx";
@@ -6,7 +6,7 @@ import useKubectx from "./hooks/useKubectx";
 const Command: React.FC = () => {
   const { contextes, switchContext, currentContext, loading } = useKubectx();
 
-  const getAccessoryIcon = (contextName: string) => {
+  const getAccessoryIcon = (contextName: string): ImageLike | undefined => {
     if (contextName !== currentContext) {
       return { source: Icon.Checkmark };
     }
